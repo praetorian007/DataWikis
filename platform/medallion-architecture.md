@@ -9,7 +9,7 @@ This architecture guarantees atomicity, consistency, isolation, and durability (
 ### Key Principles
 
 - **Progressive refinement**: Each layer builds on the previous, improving structure and quality incrementally.
-- **ACID compliance**: Ensured through open table formats (Delta Lake, Apache Iceberg) at every persistent layer.
+- **ACID compliance**: Ensured through open table formats (Delta Lake, Apache Iceberg) at every persistent layer. Delta Lake **UniForm** (Universal Format) enables Delta tables to be read natively as Iceberg or Hudi tables without data duplication, providing broad interoperability with external engines.
 - **Reproducibility**: All downstream layers should be regenerable from the Bronze layer (the system of record).
 - **Separation of concerns**: Each layer has a distinct purpose and clear boundaries â ingestion, validation, enrichment, and consumption are not conflated.
 - **Governance by design**: Access controls, lineage, and data quality checks are embedded at every tier, not bolted on afterwards.
@@ -30,10 +30,10 @@ In a Databricks environment, the medallion architecture maps naturally to Unity 
 
 | Approach | Pattern | Example |
 |----------|---------|---------|
-| Layer-as-Schema | `<catalog>.<layer>.<table>` | `edp_prod.bronze.sap_work_orders` |
-| Layer + Source-as-Schema | `<catalog>.<layer>_<source>.<table>` | `edp_prod.bronze_sap.work_orders` |
+| Layer-as-Schema | `<catalog>.<layer>.<table>` | `edap_prod.bronze.sap_work_orders` |
+| Layer + Source-as-Schema | `<catalog>.<layer>_<source>.<table>` | `edap_prod.bronze_sap.work_orders` |
 
-- **Catalogs** should reflect environment (e.g. `edp_dev`, `edp_test`, `edp_prod`) or domain boundaries (e.g. `assets`, `finance`).
+- **Catalogs** should reflect environment (e.g. `edap_dev`, `edap_test`, `edap_prod`) or domain boundaries (e.g. `assets`, `finance`).
 - **Schemas** should encode the medallion layer, optionally combined with source system or subject area.
 - **Table names** should be descriptive and business-meaningful â avoid repeating layer or source in the table name when these are already encoded in the schema.
 
@@ -101,7 +101,7 @@ The Bronze layer is the system of record for all ingested data. It preserves a c
 - Retain data for regulatory, audit, or reprocessing purposes.
 - All downstream layers must be regenerable from this zone.
 - The ingestion framework may output directly into Raw using an efficient format (e.g. Parquet or Delta).
-- For Databricks implementations, storing Bronze as Delta tables (rather than raw files in cloud storage) is recommended. Delta provides ACID transactions, time travel for debugging, schema evolution support, Z-ordering for performance, and full Unity Catalog governance including lineage tracking.
+- For Databricks implementations, storing Bronze as Delta tables (rather than raw files in cloud storage) is recommended. Delta provides ACID transactions, time travel for debugging, schema evolution support, liquid clustering for performance (replacing the now-legacy Z-ordering approach), and full Unity Catalog governance including lineage tracking.
 - Use **Auto Loader** for efficient, incremental ingestion from cloud object storage, with built-in support for schema inference and evolution.
 - Consider ingesting semi-structured data (JSON, XML) as a single **VARIANT** column for maximum robustness against upstream schema changes â this ensures no data is dropped due to unexpected field additions or type changes.
 
@@ -185,6 +185,7 @@ The Silver layer is where the ELT methodology applies "just enough" transformati
 - Ensure compliance with relevant privacy regulations (e.g. GDPR, Privacy Act, SOCI Act).
 - Use views to abstract underlying sensitive data and provide secure access layers for different user groups.
 - Implement "right to be forgotten" capabilities using Delta Lake features (Change Data Feed, deletion vectors, and VACUUM with defined retention).
+- **Deletion vectors** are a general Delta Lake performance feature, not limited to privacy compliance. They significantly improve the performance of MERGE, UPDATE, and DELETE operations by marking rows as deleted without immediately rewriting data files. Deletion vectors are enabled by default on new Delta tables.
 
 ### Base Zone
 
@@ -239,7 +240,9 @@ The Silver layer is where the ELT methodology applies "just enough" transformati
 
 **Purpose:** Provide trusted, high-performance datasets tailored for business consumption, decision-making, analytics, and reporting.
 
-The Gold layer is where semantic meaning, business logic, and consumability converge. Data here is fully refined, aggregated, and optimised for end-user queries, dashboards, machine learning, and business-critical operations. Optimising Gold-layer tables for performance is a best practice because these datasets are frequently queried â large amounts of historical data are typically accessed in the Silver layer and not materialised in Gold.
+The Gold layer is where semantic meaning, business logic, and consumability converge. Data here is fully refined, aggregated, and optimised for end-user queries, dashboards, AI agents, Databricks Apps, machine learning, and business-critical operations. Optimising Gold-layer tables for performance is a best practice because these datasets are frequently queried â large amounts of historical data are typically accessed in the Silver layer and not materialised in Gold.
+
+Gold-layer datasets increasingly serve as the foundation for **data products** — certified, contracted, and discoverable outputs that carry explicit schema definitions, quality guarantees, ownership, and SLAs. Treating Gold outputs as data products ensures they are governed, versioned, and consumable by both human users and automated agents.
 
 ### Exploratory Zone
 
@@ -257,7 +260,7 @@ The Gold layer is where semantic meaning, business logic, and consumability conv
 - Build tables around use-case themes (e.g. Customer Activity, Asset Performance).
 - Include all relevant context in a single table to reduce dependency on joins.
 - Ensure important metadata (e.g. source, timestamp, version, lineage) is included.
-- Partition and index large tables for performance (consider Z-ordering on frequently filtered columns).
+- Partition and optimise large tables for performance. Use **liquid clustering** on frequently filtered columns â this is the modern replacement for Z-ordering (now considered legacy for Delta tables) and Hive-style partitioning, providing automatic, adaptive data layout without manual maintenance.
 - Maintain documentation on assumptions and enrichments applied.
 - Use standardised naming conventions to maintain readability.
 - Allow flexibility in schema evolution, but enforce minimum data quality thresholds.
@@ -295,7 +298,7 @@ The Gold layer is where semantic meaning, business logic, and consumability conv
 - Apply appropriate surrogate key management strategies.
 - Use **materialized views** for frequently accessed aggregations to improve query performance.
 - Define refresh frequencies and enforce SLAs on data recency.
-- Provide semantic metadata for BI tools (e.g. Databricks AI/BI Dashboards, Power BI, Tableau).
+- Provide semantic metadata for BI tools (e.g. Databricks AI/BI Dashboards, Power BI, Tableau), AI agents, and Databricks Apps.
 - Organise Gold tables by business domain (e.g. sales, operations, finance).
 
 ---
@@ -379,6 +382,10 @@ Auto Loader is the recommended ingestion tool for streaming file ingestion from 
 - Rescued data column for capturing records that fail parsing.
 - Native integration with Lakeflow Declarative Pipelines.
 
+### Predictive Optimisation
+
+Databricks **predictive optimisation** automatically handles OPTIMIZE, VACUUM, and ANALYZE TABLE operations for managed Delta tables in Unity Catalog. Rather than manually scheduling maintenance, predictive optimisation uses historical access patterns to determine when and how to optimise each table. It is recommended to enable predictive optimisation at the catalog or schema level to reduce operational overhead and ensure consistent table performance across all medallion layers.
+
 ### Processing Patterns
 
 | Pattern | Description | Best For |
@@ -396,7 +403,7 @@ Auto Loader is the recommended ingestion tool for streaming file ingestion from 
 |------|-------|---------|-------------------|-----------|-------------------|
 | Landing | Bronze | Temporarily stage raw extracts before ingestion | Platform ingestion framework | Mixed formats (any) | Ingestion buffering, arrival tracking |
 | Raw | Bronze | Persist original, unaltered data for traceability and reprocessing | Data Engineers, Auditors | Append-only, immutable, original or Delta format | System of record, audit replay |
-| Processed | Bronze | Schema validation, format standardisation | Data Engineers | Append-only, immutable, Delta/Iceberg | Schema enforcement, deduplication prep |
+| Processed | Bronze | Schema validation, format standardisation | Data Engineers | Append-only, immutable, Delta/Iceberg (UniForm enables cross-format reads) | Schema enforcement, deduplication prep |
 | Protected | Silver | Secure and isolate sensitive information (e.g. PI) | Privileged users (via PAM/RBAC) | Structured, access-controlled | Managing regulated or protected data |
 | Base | Silver | Cleanse and standardise; apply quality rules | Data Engineers, Analysts, Scientists | Structured with history | Trusted foundation for enrichment |
 | Enriched | Silver | Integrate cleansed data with reference/master data; add business context | Data Engineers, Data Scientists | Structured, lightly (de)normalised | Cross-source joins, calculated attributes |
@@ -413,7 +420,7 @@ Maintain consistency, clarity, and usability across datasets, tables, and fields
 
 ### General Guidelines
 
-- Apply naming conventions uniformly across the entire EDP.
+- Apply naming conventions uniformly across the entire EDAP.
 - Choose names that clearly describe the purpose and contents of the object.
 - Avoid complex or cryptic names â favour understandable terminology.
 - Use underscores (`_`) to separate words (e.g. `customer_address`).
@@ -484,7 +491,7 @@ A well-defined folder structure is crucial for managing the data lifecycle, ensu
 ```
 
 - Data structured into logical tables using open table formats (Delta Lake or Iceberg).
-- Hive-style partitioning for optimised query performance.
+- Hive-style partitioning for optimised query performance. Note that for Delta tables, **liquid clustering** is now preferred over Hive-style partitioning â it provides automatic, adaptive data layout and eliminates the need to choose partition columns upfront.
 - Partitioning strategy should align with common query patterns and downstream processing needs.
 
 ---
@@ -505,7 +512,7 @@ For maximum security, consider dedicated service principals per medallion layer,
 |-------|---------------|
 | Bronze | Data Engineers, Platform team |
 | Silver | Data Engineers, Data Analysts, Data Scientists |
-| Gold | Business Users, BI Analysts, Application services |
+| Gold | Business Users, BI Analysts, AI Agents, Databricks Apps, Application services |
 | Sandbox | Individual users (private by default) |
 | Quarantine | Data Engineers, Data Stewards |
 

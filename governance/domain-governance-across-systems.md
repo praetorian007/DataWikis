@@ -329,7 +329,7 @@ Technical custodians in each system then implement the appropriate controls usin
 
 Governed tags are the mechanism that makes domain governance enforceable at the platform level. They provide a universal taxonomy that bridges domain policy with technical enforcement.
 
-### 5.1 Tag Categories
+### 6.1 Tag Categories
 
 | Tag Category | Purpose | Examples | Enforcement Mechanism |
 |---|---|---|---|
@@ -341,7 +341,7 @@ Governed tags are the mechanism that makes domain governance enforceable at the 
 | **Quality Tier** | Steward-certified quality level | `quality_tier = certified`, `quality_tier = provisional` | Discover marketplace ranking, consumer trust signals |
 | **Data Product** | Data product membership | `data_product = asset_condition_analytics` | Discover marketplace organisation, access request bundling |
 
-### 5.2 Tag Governance Process
+### 6.2 Tag Governance Process
 
 1. **Tag policies** are defined at the account level by the central governance function, establishing the controlled vocabulary (allowed tag keys and permitted values)
 2. **Automated classification** applies sensitivity tags (PII, PHI) without human intervention
@@ -355,7 +355,7 @@ Governed tags are the mechanism that makes domain governance enforceable at the 
 
 The hardest governance challenge is ensuring that a domain policy decision propagates consistently across all systems that hold data within that domain's scope.
 
-### 6.1 EDAP as Governance Hub
+### 7.1 EDAP as Governance Hub
 
 For the current maturity stage, the EDAP (via Unity Catalog) serves as the **governance hub** â the system of record for domain classification taxonomy and the primary enforcement point for analytics governance:
 
@@ -404,7 +404,7 @@ For the current maturity stage, the EDAP (via Unity Catalog) serves as the **gov
 - Stewards maintain a **cross-system alignment register** (initially in Confluence, potentially in Purview or a business catalogue as maturity increases) that maps each domain classification decision to its corresponding source system controls
 - Periodic stewardship reviews validate that source system controls remain aligned with the EDAP-authoritative classification taxonomy
 
-### 6.2 When to Introduce an Enterprise Catalogue Layer
+### 7.2 When to Introduce an Enterprise Catalogue Layer
 
 The EDAP-as-governance-hub pattern is appropriate when:
 
@@ -422,9 +422,51 @@ Consider introducing a dedicated enterprise catalogue layer (e.g. Microsoft Purv
 
 ---
 
-## 8. Governance Operating Model
+## 8. AI Governance in the Federated Model
 
-### 8.1 Governance Cadence
+As AI and machine learning capabilities mature within the EDAP, the three-layer governance model must extend to cover AI-specific governance concerns. AI introduces new risks around data usage rights, model output ownership, and cross-domain data combination that the existing classification model does not fully address.
+
+### 8.1 Approval for AI Training Use
+
+The domain owner retains authority over whether domain data may be used for AI model training. This is governed through the `ai_training_permitted` and `ai_use_restriction` tags defined in the EDAP Tagging Strategy. Specifically:
+
+- The **domain owner** must approve any use of their domain's data for model training, whether for internal models or external AI services.
+- Approval is recorded as a governed tag (`ai_training_permitted = true`) and logged in the governance register.
+- Data classified under the PRIS Act 2024 as personal information must not be used for AI training without a documented lawful basis, regardless of domain owner approval.
+- SOCI-critical data requires additional review by the security and compliance team before AI training approval is granted.
+
+### 8.2 Cross-Domain Model Outputs
+
+When an AI model consumes data from multiple domains, the governance of the model's output follows these principles:
+
+- The model output is treated as a **new data product** and must have an assigned domain owner and data product owner.
+- The output inherits the **highest watermark classification** of all contributing input domains.
+- All contributing domain owners must be consulted before the model output is published as a data product. Where any contributing domain owner objects, the matter is escalated to the EIGC.
+- Lineage must trace model outputs back to contributing source domains, enabling impact analysis when source data classifications change.
+
+### 8.3 AI-Generated Data Products
+
+AI-generated data products (predictions, scores, recommendations, synthetic datasets) fit into the existing domain ownership model as follows:
+
+- AI-generated outputs are assigned to the **consuming domain** that commissioned or operates the model, not to the source data domain(s).
+- The data product owner is accountable for the accuracy, fairness, and appropriate use of the AI-generated output, including monitoring for model drift and bias.
+- Synthetic datasets derived from sensitive data inherit the source data's classification until a formal privacy assessment confirms the synthetic data does not enable re-identification.
+
+### 8.4 AI Agent Governance
+
+AI agents that autonomously access, combine, or act on data within the EDAP are subject to the following governance requirements:
+
+- AI agents must authenticate via dedicated service principals with least-privilege access, scoped to the minimum data required for their function.
+- Agent access is governed by the same ABAC policies, governed tags, and row/column security that apply to human users. Agents do not receive blanket access.
+- Agent actions that modify data, trigger workflows, or generate outputs consumed by humans must produce an audit trail traceable to the agent's service principal and the authorising domain owner.
+- Cross-domain data access by agents follows the same request and approval process as human cross-domain access. Agents acting on behalf of a domain operate within that domain's access permissions.
+- High-risk agent actions (accessing SOCI-critical data, processing personal information, generating external-facing outputs) require pre-approval from the relevant domain owner and are subject to enhanced audit logging.
+
+---
+
+## 9. Governance Operating Model
+
+### 9.1 Governance Cadence
 
 | Activity | Frequency | Participants | Purpose |
 |---|---|---|---|
@@ -434,7 +476,7 @@ Consider introducing a dedicated enterprise catalogue layer (e.g. Microsoft Purv
 | **Governance taxonomy review** | Six-monthly | Domain owners, stewards, platform team | Review and update the governed tag taxonomy, ABAC policies, and classification standards |
 | **Architecture Review Board** | As required | ARB members | Approve significant changes to governance architecture, new domain definitions, or new system integrations |
 
-### 8.2 Governance Metrics
+### 9.2 Governance Metrics
 
 | Metric | Measurement Point | Target |
 |---|---|---|
@@ -445,9 +487,43 @@ Consider introducing a dedicated enterprise catalogue layer (e.g. Microsoft Purv
 | Data product certification | % of Discover-published data products with steward certification | > 80% |
 | Quality signal coverage | % of Gold zone tables with active DQ monitoring | > 90% |
 
+### 9.3 Incident Response Governance
+
+Data governance incidents require a clear command structure that operates across the three-layer model. The following incident types are in scope:
+
+| Incident Type | Description | Mandatory Reporting |
+|---|---|---|
+| **PII exposure** | Unauthorised access to or disclosure of personal information | PRIS Act 2024 breach notification obligations; Privacy Commissioner notification where applicable |
+| **SOCI-classified data leak** | Unauthorised access to or disclosure of data classified under the SOCI Act 2018 | SOCI Act mandatory reporting to the Cyber and Infrastructure Security Centre (CISC) within timeframes prescribed by the Act |
+| **Data quality incident** | A material data quality failure that affects downstream decision-making, reporting, or regulatory compliance | Internal escalation; regulatory reporting where the quality failure affects compliance obligations |
+
+**Incident command model:**
+
+- The **Data Protection Officer (DPO)** is the incident commander for PII exposure and SOCI-classified data leak incidents. The DPO coordinates response across all three governance layers, engages legal and compliance, and manages mandatory reporting obligations.
+- The **domain owner** is the incident commander for data quality incidents within their domain. Where a quality incident spans multiple domains, the EIGC nominates a lead domain owner.
+- During an incident, the three-layer model operates as follows:
+  - **Layer 1 (Domain Governance):** The domain owner authorises emergency access changes, temporary data restrictions, or communication to affected stakeholders.
+  - **Layer 2 (Source System Governance):** Source system administrators implement emergency access revocations or restrictions as directed by the incident commander.
+  - **Layer 3 (EDAP Governance):** The platform team implements emergency Unity Catalog access revocations, tag changes, or data quarantine actions as directed by the incident commander.
+
+**SOCI Act mandatory reporting:** As a critical infrastructure entity under the SOCI Act 2018, Water Corporation has mandatory reporting obligations for cyber security incidents affecting critical infrastructure assets. The DPO, in coordination with the CISO, must ensure that incidents involving SOCI-classified data are reported to the CISC within the prescribed timeframes (currently 12 hours for critical incidents, 72 hours for other reportable incidents). The governance register must record all incident response actions for audit purposes.
+
+### 9.4 Quality Accountability Model
+
+Data quality accountability follows the data through each transition point from source to consumption:
+
+| Transition Point | Accountable Role | Quality Responsibility |
+|---|---|---|
+| **Source system** | Source system owner | Accuracy, completeness, and timeliness of data at the point of origin. Responsible for remediating quality issues identified by downstream stewards. |
+| **Ingestion (Landing/Raw)** | Ingestion pipeline owner (data engineering) | Faithful capture of source data without loss or corruption. Completeness checks (record counts, schema validation). Not accountable for source data quality. |
+| **Raw to Base transformation** | Domain data steward | Validation that transformation logic correctly maps source data to domain-aligned structures. DQ rule definition and threshold setting. |
+| **Data product (Gold)** | Data product owner | End-to-end quality of the published data product against its data contract. Monitoring, alerting, and remediation coordination. Accountable to consumers for meeting SLA commitments. |
+
+Quality issues discovered downstream are traced back to the earliest responsible transition point for remediation. The domain steward coordinates cross-layer quality investigations and escalates to the domain owner where systemic issues require source system intervention.
+
 ---
 
-## 9. Worked Example: SOCI-Critical Asset Data
+## 10. Worked Example: SOCI-Critical Asset Data
 
 To illustrate how the three-layer model works in practice:
 
@@ -475,7 +551,7 @@ The Asset Management data steward validates that ABAC policies in the EDAP, SAP 
 
 ---
 
-## 10. Relationship to Enterprise Architecture
+## 11. Relationship to Enterprise Architecture
 
 This governance model operates within the broader enterprise architecture context:
 
@@ -491,7 +567,7 @@ This governance model operates within the broader enterprise architecture contex
 
 ---
 
-## 11. Future State Considerations
+## 12. Future State Considerations
 
 As the governance model matures, the following evolutionary steps should be evaluated:
 
@@ -499,7 +575,7 @@ As the governance model matures, the following evolutionary steps should be eval
 
 2. **Formal stewardship workflows**: If the stewardship cadence described in section 8.1 proves insufficient for regulatory demands, a dedicated business catalogue (Collibra, Atlan) can provide workflow orchestration with approval chains, escalation paths, and SLA tracking. This should be a pull-based decision driven by demonstrated need, not a push-based procurement.
 
-3. **Data contracts**: As data products mature, formalise the interface between producer and consumer domains through data contracts â schema guarantees, quality SLAs, freshness commitments â enforced through the SDP framework and monitored via Unity Catalog DQ monitoring.
+3. **Data contracts** (current emerging practice): Data contracts are being adopted as the formal interface between producer and consumer domains. A data contract defines: a **schema definition** (guaranteed column structure, data types, and nullable constraints); a **freshness SLA** (maximum acceptable latency between source change and data product availability); **quality thresholds** (minimum acceptable DQ pass rates and specific rules the producer commits to enforcing); **ownership** (the data product owner accountable for meeting the contract); **versioning** (semantic versioning with a defined deprecation period for breaking changes); and a **breaking change policy** (versioned, notify, or unmanaged). Contracts are enforced through the SDP framework (`contract_version`, `contract_sla_tier`, and `breaking_change_policy` tags in Unity Catalog) and monitored via Lakehouse Monitoring and DQ expectations. This replaces the earlier framing of data contracts as a future-state consideration; they are now an active part of the governance model.
 
 4. **Computational governance**: Progressively shift governance enforcement from human-driven stewardship review towards automated, policy-as-code execution â governed tags applied automatically based on schema patterns, ABAC policies inherited by convention, quality rules enforced in pipelines. Human governance effort shifts from enforcement to exception management and policy evolution.
 

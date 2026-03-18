@@ -174,6 +174,66 @@ This layer explains the **nature** of the sensitivity. While WAICP tells you *th
 | `financial_sensitive` | Detailed financial information not publicly reported | Internal cost models, budget deliberations, investment analysis |
 | `environmental_sensitive` | Environmental monitoring data with compliance implications | Discharge monitoring, contamination levels, compliance test results |
 
+#### 5.2.4 AI/ML Governance
+
+These tags govern whether and how data may be used for artificial intelligence and machine learning purposes, including model training, inference, and synthetic data generation.
+
+| Tag Key | `ai_training_permitted` |
+|---------|------------------------|
+| **Applied to** | Tables |
+| **Allowed values** | `true`, `false` |
+| **Purpose** | Controls whether the data in this table may be used as training input for machine learning models. Must be `false` for tables containing personal information unless explicit consent or a lawful basis exists under the PRIS Act 2024. |
+
+| Tag Key | `ai_use_restriction` |
+|---------|---------------------|
+| **Applied to** | Tables |
+| **Allowed values** | `none`, `internal_model_only`, `not_permitted` |
+| **Purpose** | Controls the permitted AI consumption pattern for this data. |
+
+| Value | Description |
+|-------|-------------|
+| `none` | No AI-specific restriction beyond standard access controls. |
+| `internal_model_only` | Data may only be consumed by internally developed and governed models. Not permitted for use with third-party or externally hosted AI services. |
+| `not_permitted` | Data must not be used for any AI/ML purpose, including feature engineering, model training, or inference input. |
+
+| Tag Key | `synthetic_derivation` |
+|---------|----------------------|
+| **Applied to** | Tables |
+| **Allowed values** | `true`, `false` |
+| **Purpose** | Indicates whether the data is synthetically generated or has been used to generate synthetic data. Synthetic datasets derived from sensitive sources inherit the classification of the source for governance purposes, even where individual records are not identifiable. |
+
+#### 5.2.5 Automated Data Classification Integration
+
+Unity Catalog's automated Data Classification feature detects PII and other sensitive data patterns at the column level. This section defines how automated detection integrates with the manual tag taxonomy.
+
+**Mapping from automated detection to Layer 2 tags:**
+
+| Auto-Detected Category | Maps To `pii_contained` | Maps To `pii_type` | Maps To `sensitivity_type` |
+|---|---|---|---|
+| Personal name | `true` | `direct_identifier` | `personal_information` |
+| Email address | `true` | `direct_identifier` | `personal_information` |
+| Phone number | `true` | `direct_identifier` | `personal_information` |
+| Physical address | `true` | `direct_identifier` | `personal_information` |
+| Date of birth | `true` | `indirect_identifier` | `personal_information` |
+| Financial identifier (TFN, bank account) | `true` | `sensitive_pi` | `personal_information`, `financial_sensitive` |
+| Health indicator | `true` | `sensitive_pi` | `personal_information` |
+
+**Authority model:**
+
+Automated Data Classification tags are treated as **advisory, not authoritative**. They provide a high-confidence starting point that accelerates the steward's classification assessment, but they do not replace steward judgement. Specifically:
+
+- Auto-detected tags are applied immediately and are visible in Unity Catalog and Discover.
+- Auto-detected tags do **not** change the `classification_status` from `unclassified` to `provisional`. Only a steward review can progress the classification lifecycle.
+- Stewards must confirm or override auto-detected tags as part of the classification assessment. Once confirmed, the tag source is recorded as `steward_confirmed` in the governance register.
+
+**Conflict resolution:**
+
+Where automated detection and steward-assigned tags disagree:
+
+1. **Steward assigns a higher sensitivity than auto-detection:** The steward's classification takes precedence. This is common for business-context classifications (e.g. SOCI criticality) that automated detection cannot identify.
+2. **Steward assigns a lower sensitivity than auto-detection:** The steward must provide documented justification. Common scenarios include false positives (e.g. a column named `contact_name` that contains organisation names, not personal names). The justification is recorded in the governance register and reviewed at the next stewardship review.
+3. **Auto-detection identifies PII that the steward missed:** The automated tag remains active as a protective default until the steward explicitly reviews and either confirms or overrides it.
+
 ---
 
 ## 6. Layer 3 â Access & Handling (Technical Enforcement)
@@ -259,7 +319,42 @@ ALTER TABLE prod_silver.customer_base.customer_master
 | `platform_default` | AWS S3 server-side encryption (SSE-S3 or SSE-KMS with Databricks-managed key). Sufficient for OFFICIAL and most OFFICIAL: Sensitive data. |
 | `customer_managed_key` | AWS KMS customer-managed key (CMK). Required for OFFICIAL: Sensitive data with `infrastructure_vulnerability` or `operational_security` sensitivity types, per SOCI Act risk management program. |
 
-#### 6.2.5 Retention
+#### 6.2.5 Data Contract
+
+These tags link a table to its governing data contract, enabling automated contract compliance monitoring and consumer trust signals.
+
+| Tag Key | `contract_version` |
+|---------|-------------------|
+| **Applied to** | Tables |
+| **Allowed values** | Semantic version string (e.g. `1.0.0`, `2.1.0`) |
+| **Purpose** | Identifies the active data contract version governing the table's schema, quality thresholds, and freshness SLA. Consumers can pin to a contract version for stability. |
+
+| Tag Key | `contract_sla_tier` |
+|---------|-------------------|
+| **Applied to** | Tables |
+| **Allowed values** | `platinum`, `gold`, `silver`, `bronze` |
+| **Purpose** | Defines the freshness and quality SLA tier for the data product. |
+
+| Value | Freshness SLA | Quality Threshold |
+|-------|---------------|-------------------|
+| `platinum` | < 15 minutes | > 99.5% DQ pass rate |
+| `gold` | < 1 hour | > 99% DQ pass rate |
+| `silver` | < 24 hours | > 95% DQ pass rate |
+| `bronze` | Best effort | > 90% DQ pass rate |
+
+| Tag Key | `breaking_change_policy` |
+|---------|------------------------|
+| **Applied to** | Tables |
+| **Allowed values** | `versioned`, `notify`, `none` |
+| **Purpose** | Defines how breaking schema or semantic changes are communicated to consumers. |
+
+| Value | Description |
+|-------|-------------|
+| `versioned` | Breaking changes result in a new contract version. The previous version remains available for a deprecation period. Consumers must explicitly migrate. |
+| `notify` | Breaking changes are communicated to registered consumers with a minimum notice period, but do not result in a new contract version. |
+| `none` | No formal breaking change policy. Appropriate for exploratory or sandbox data only. |
+
+#### 6.2.6 Retention
 
 | Tag Key | `retention_days` |
 |---------|-----------------|
@@ -578,6 +673,8 @@ RETURN CASE
 END;
 ```
 
+> **Warning:** The `'edap_salt'` value above is illustrative only. Production implementations must retrieve the salt from a secret-managed store (e.g. Databricks Secrets backed by Azure Key Vault), not a hardcoded string. A hardcoded salt is vulnerable to exposure through source control, notebook exports, and query history. Use `secret('edap-governance', 'hash-salt')` or an equivalent secret scope reference.
+
 ### 11.4 Row-Level Security
 
 Row-level security (Unity Catalog row filters) should be used where access restrictions depend on the *values* within rows rather than column identity:
@@ -637,7 +734,19 @@ The following categories require sensitivity assessment and potential masking. T
 | Layer 3 (Access) | Unity Catalog | UC â Alation (read-only) | Alation OCF connector |
 | Layer 4 (Operational) | Unity Catalog (technical), Alation (business glossary enrichment) | Bidirectional â UC tags â Alation; Alation business descriptions â UC COMMENTs | OCF connector + scheduled Python sync job |
 
-### 12.2 Alation Governance Overlay
+### 12.2 Architectural Relationship: Alation, Unity Catalog, and UC Discover
+
+Alation and Unity Catalog serve complementary but distinct roles in the governance architecture:
+
+- **Alation** is the **enterprise-wide data catalogue** for business users and cross-system discovery. It provides a single pane of glass across Databricks, SAP, Maximo, ESRI, and other systems, enabling business users to discover, understand, and request access to data regardless of where it resides. Alation is the primary interface for business glossary management, stewardship workflows, and cross-platform lineage.
+
+- **Unity Catalog** is the **platform-level governance and access control layer** within Databricks. It is the system of record for governed tags, ABAC policies, column masking, row-level security, and runtime access enforcement within the EDAP. Unity Catalog governs what happens inside Databricks; Alation governs how the organisation discovers and understands data across all systems.
+
+- **UC Discover** (the Unity Catalog Marketplace and discovery interface) complements Alation for **Databricks-native discovery**. Data engineers and analysts working within the Databricks workspace use Discover for in-platform search, data product browsing, and quality signal inspection. Discover does not replace Alation for enterprise-wide discovery, but provides a richer, more integrated experience for users already working within Databricks.
+
+In summary: Alation is the business user's front door to all organisational data; Unity Catalog is the technical enforcement engine within Databricks; UC Discover is the Databricks-native discovery experience that surfaces UC-governed metadata for platform users.
+
+### 12.3 Alation Governance Overlay
 
 Alation provides capabilities that extend beyond UC tagging:
 
@@ -863,12 +972,18 @@ The EIGC ratifies the classification. Silver tables are now deployed:
 | `pii_contained` | 2 | Tables, columns | Mandatory (Silver, Gold) | `false` |
 | `pii_type` | 2 | Columns | Mandatory (where `pii_contained = true`) | â |
 | `regulatory_scope` | 2 | Tables | Mandatory (Silver, Gold) | `none` |
-| `sensitivity_type` | 2 | Tables, columns | Mandatory (where sensitive) | â |
+| `sensitivity_type` | 2 | Tables, columns | Mandatory (where sensitive)  — |
+| `ai_training_permitted` | 2 | Tables | Recommended | `false` |
+| `ai_use_restriction` | 2 | Tables | Recommended | `none` |
+| `synthetic_derivation` | 2 | Tables | Recommended (where applicable) | `false` |
 | `access_model` | 3 | Tables, schemas | Mandatory (Silver, Gold) | `controlled` |
 | `masking_required` | 3 | Columns | Mandatory (where `pii_type` set) | `none` |
 | `sharing_permitted` | 3 | Tables, schemas | Mandatory (Gold) | `internal_only` |
 | `encryption_at_rest` | 3 | Tables, schemas, catalogs | Mandatory (SOCI-scoped) | `platform_default` |
 | `retention_days` | 3 | Tables | Mandatory (Silver, Gold) | â |
+| `contract_version` | 3 | Tables | Recommended (where contract defined) | — |
+| `contract_sla_tier` | 3 | Tables | Recommended (where contract defined) | — |
+| `breaking_change_policy` | 3 | Tables | Recommended (where contract defined) | `none` |
 | `medallion_layer` | 4 | Catalogs, schemas | Mandatory | â |
 | `medallion_sublayer` | 4 | Schemas | Mandatory | â |
 | `source_system` | 4 | Schemas, tables | Mandatory | â |

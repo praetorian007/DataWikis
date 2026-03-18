@@ -232,8 +232,30 @@ The DPO provides independent oversight of personal and sensitive information han
 - Act as the point of contact for regulators and data subjects.
 - Review data sharing agreements involving personal or sensitive information.
 - Ensure privacy-by-design principles are embedded in data platform architecture.
+- Coordinate SOCI Act 2018 mandatory reporting obligations for cyber security incidents affecting critical infrastructure data, in conjunction with the CISO. As a critical infrastructure entity, Water Corporation must report significant cyber security incidents to the Cyber and Infrastructure Security Centre (CISC) within prescribed timeframes.
 
-**Decision rights:** Privacy compliance assessments, regulatory reporting, privacy risk escalation.
+**Decision rights:** Privacy compliance assessments, regulatory reporting, privacy risk escalation, SOCI Act incident reporting coordination.
+
+---
+
+### AI/ML Governance Lead
+
+The AI/ML Governance Lead (sometimes titled Responsible AI Officer) provides oversight of the organisation's use of artificial intelligence and machine learning, ensuring that AI systems are developed and operated in accordance with ethical principles, regulatory requirements, and organisational risk appetite.
+
+**Key responsibilities:**
+
+- Establish and maintain the AI governance framework, including principles for fairness, bias mitigation, transparency, and explainability.
+- Maintain an AI model inventory â a register of all AI/ML models in development, testing, and production, including their training data sources, intended use, risk classification, and responsible domain owner.
+- Classify AI models by risk tier (e.g. low, medium, high, critical) based on their impact on individuals, operational safety, and regulatory exposure. High and critical models require enhanced governance review.
+- Ensure compliance with emerging AI regulations and standards applicable to Australian government entities and critical infrastructure operators.
+- Advise domain owners and data product owners on the governance implications of using domain data for AI training, including PRIS Act 2024 obligations for personal information.
+- Review and approve the use of third-party or externally hosted AI services that consume Water Corporation data.
+- Coordinate with the DPO on privacy impact assessments for AI systems that process personal information.
+- Report on AI governance posture and risk to the Data Governance Council.
+
+**Relationship to Data Product Owner:** Where an AI/ML model consumes a data product, the Data Product Owner retains accountability for the quality, classification, and access governance of the input data. The AI/ML Governance Lead is accountable for the governance of the model itself â its fairness, transparency, and appropriate use. In organisations where a dedicated AI/ML Governance Lead role is not yet established, this accountability maps to the Data Product Owner for models that consume their data product, with the Data Governance Council providing oversight.
+
+**Decision rights:** AI risk classification, AI model inventory management, approval of third-party AI service usage, AI governance framework and standards.
 
 ---
 
@@ -264,27 +286,36 @@ In a **centralised** model, a central team holds most stewardship functions. In 
 | Consistency risk | Low (but bottleneck risk) | Higher (divergent practices) | Managed through standards and communities of practice |
 | Scalability | Limited | High | High with guardrails |
 
+**Choosing the right model:**
+
+- **Centralised** suits organisations with a small number of data domains, a single platform team, and a strong central governance function. It provides maximum consistency but can become a bottleneck as the number of domains and data products grows.
+- **Federated** suits large, multi-business-unit organisations where each unit has distinct data domains, dedicated engineering teams, and different regulatory contexts. It provides maximum autonomy but risks inconsistent practices without strong coordination.
+- **Hybrid** is the recommended model for most organisations, including Water Corporation. It combines central policy setting and standards with domain-level stewardship and enforcement.
+
+**Recommendation for Water Corporation:** Given Water Corporation's scale (a single utility with a centralised platform delivery model, fewer than ten major source systems, and a single regulatory jurisdiction), the **hybrid model** is recommended. Central governance sets the tag taxonomy, classification standards, ABAC policy patterns, and quality frameworks. Domain stewards embedded in each business area apply these standards to their domain's data, make classification decisions, and validate technical controls. The platform team provides the shared infrastructure and tooling that enables consistent enforcement. This avoids the overhead of a fully federated model (which is designed for multi-entity enterprises) while preserving the domain accountability that a purely centralised model struggles to maintain.
+
 ---
 
 ## RACI Summary
 
-| Activity | CDO | Data Owner | Domain Steward | Technical Steward | Custodian | Product Owner | Platform Owner | Producer | Consumer |
-|---|---|---|---|---|---|---|---|---|---|
-| Set data strategy | **A/R** | C | C | I | I | I | C | I | I |
-| Define access policy | I | **A** | **R** | C | I | C | I | I | I |
-| Approve data classification | C | **A** | **R** | C | I | I | I | I | I |
-| Maintain business glossary | I | C | **A/R** | C | I | C | I | C | C |
-| Implement quality rules | I | I | **A** | **R** | I | C | I | C | I |
-| Configure platform access controls | I | I | C | **A/R** | C | I | C | I | I |
-| Manage infrastructure security | I | I | I | C | **A/R** | I | C | I | I |
-| Define data product scope and contract | I | **A** | C | C | I | **R** | I | C | C |
-| Publish data products | I | C | C | C | I | **A** | I | **R** | I |
-| Manage data product lifecycle | I | C | C | I | I | **A/R** | I | C | C |
-| Define platform roadmap | C | I | I | C | C | C | **A/R** | I | I |
-| Set platform standards and conventions | I | I | I | C | C | I | **A/R** | I | I |
-| Platform onboarding and enablement | I | I | I | C | C | I | **A/R** | C | C |
-| Report quality issues | I | I | C | C | I | C | I | I | **R** |
-| Backup and disaster recovery | I | I | I | I | **A/R** | I | C | I | I |
+| Activity | CDO | Data Owner | Domain Steward | Technical Steward | Custodian | Product Owner | Platform Owner | Producer | Consumer | DPO |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Set data strategy | **A/R** | C | C | I | I | I | C | I | I | I |
+| Define access policy | I | **A** | **R** | C | I | C | I | I | I | **C** |
+| Approve data classification | C | **A** | **R** | C | I | I | I | I | I | **C** |
+| Maintain business glossary | I | C | **A/R** | C | I | C | I | C | C | I |
+| Implement quality rules | I | I | **A** | **R** | I | C | I | C | I | I |
+| Configure platform access controls | I | I | C | **A/R** | C | I | C | I | I | I |
+| Manage infrastructure security | I | I | I | C | **A/R** | I | C | I | I | I |
+| Define data product scope and contract | I | **A** | C | C | I | **R** | I | C | C | I |
+| Publish data products | I | C | C | C | I | **A** | I | **R** | I | I |
+| Manage data product lifecycle | I | C | C | I | I | **A/R** | I | C | C | I |
+| Define platform roadmap | C | I | I | C | C | C | **A/R** | I | I | I |
+| Set platform standards and conventions | I | I | I | C | C | I | **A/R** | I | I | I |
+| Platform onboarding and enablement | I | I | I | C | C | I | **A/R** | C | C | I |
+| Report quality issues | I | I | C | C | I | C | I | I | **R** | I |
+| Backup and disaster recovery | I | I | I | I | **A/R** | I | C | I | I | I |
+| Assess privacy and PI handling | I | C | C | I | I | I | I | I | I | **A/R** |
 
 **A** = Accountable, **R** = Responsible, **C** = Consulted, **I** = Informed
 

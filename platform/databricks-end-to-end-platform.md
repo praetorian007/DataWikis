@@ -38,7 +38,7 @@ Lakeflow Connect is Databricks' native, fully-managed ingestion service. It prov
 
 **Cursor-based recovery:** On failure, connectors store the last cursor position and retry with exponential backoff. When credentials expire or an external service changes, the connector picks up from the stored position on the next successful run.
 
-**Infrastructure as Code:** Ingestion pipelines can be deployed via Databricks Asset Bundles (DABs) â enabling source control, code review, CI/CD, and multi-environment deployment (dev â staging â prod). Terraform support is also available.
+**Infrastructure as Code:** Ingestion pipelines can be deployed via **Databricks Asset Bundles (DABs)** â enabling source control, code review, CI/CD, and multi-environment deployment (dev â staging â prod). Terraform support is also available, and the two approaches can be used complementarily. DABs are the primary IaC deployment model for all Databricks assets, including jobs, pipelines, notebooks, ML models, and dashboard configurations, providing a single declarative YAML definition per project.
 
 ### 2.4 Landing Zone Pattern
 
@@ -139,9 +139,9 @@ Expectation metrics (rows passed, failed, dropped) are written to the pipeline e
 
 ### 4.1 The Three-Level Namespace
 
-All data assets are addressed as `catalog.schema.object`. The catalog is the primary unit of data isolation â commonly aligned to environments (e.g., `dev_bronze`, `prod_silver`) or organisational units.
+All data assets are addressed as `catalog.schema.object`. The catalog is the primary unit of data isolation â commonly aligned to environments (e.g., `dev_bronze`, `prod_silver`), organisational units, or data domains. Catalogs can be organised by environment, by domain, by medallion layer, or by a combination of these axes. See the companion **EDAP Access Model** document for Water Corporation's specific domain-based catalog approach (`<env>_<domain>`).
 
-**Object types governed:** Tables (managed and external), views, materialized views, streaming tables, volumes (structured and unstructured files), ML models, functions (UDFs), connections, metrics, and AI agents.
+**Object types governed:** Tables (managed and external), views, materialized views, streaming tables, volumes (structured and unstructured files), ML models, functions (UDFs), connections, metrics, and AI agents. **Unity Catalog Volumes** are the managed replacement for the legacy DBFS root and mount points. Volumes provide governed, access-controlled storage for unstructured data (images, PDFs, audio, video, model artefacts) and are essential for applying the same governance framework to file-based assets as to tabular data.
 
 ### 4.2 Access Control
 
@@ -200,6 +200,14 @@ Lakeguard is the isolation and data filtering layer that underpins serverless an
 - **UDF sandboxing:** User-defined functions execute in sandboxed environments with isolated egress network traffic, preventing unauthorised external access.
 
 Lakeguard is what makes fine-grained access control (ABAC, row filters, column masks) enforceable at runtime, including for distributed ML workloads (Spark MLlib on serverless is now Public Preview).
+
+### 5.3 Cost Management
+
+Effective cost management on Databricks centres on three capabilities:
+
+- **Serverless billing:** Serverless compute uses pay-for-work-done pricing, eliminating idle cluster costs. Understanding the billing model for serverless SQL warehouses, jobs, SDP pipelines, and Model Serving endpoints is essential for forecasting.
+- **System tables for cost attribution:** The `system.billing.usage` and related system tables enable granular cost attribution by workspace, job, pipeline, user, and tag. These tables are the foundation for chargeback and showback models across domains.
+- **Cluster policies:** For non-serverless compute, cluster policies enforce guardrails on instance types, autoscaling ranges, spot/on-demand ratios, and automatic termination. Policies should be defined per team or workload type to prevent cost overruns.
 
 ---
 
@@ -280,11 +288,15 @@ Genie is the conversational analytics layer. Business users ask questions in nat
 - **Genie API (GA):** `CreateSpace`, `UpdateSpace`, `GetSpace`, `ListSpaces`, `TrashSpace` â enabling integration into Slack, Microsoft Teams, or custom applications.
 - **Automatic JOIN relationships:** The API now auto-creates JOIN relationships based on primary and foreign key metadata in Unity Catalog.
 
-### 8.3 Databricks One
+### 8.3 Databricks Apps
+
+Databricks Apps enable teams to build and deploy custom data applications — using frameworks such as Streamlit, Dash, and Gradio — directly within the Databricks platform. Apps are governed by Unity Catalog, meaning they respect the same access controls, lineage, and tagging as any other platform asset. They provide a flexible consumption layer for interactive tools, operational dashboards, and domain-specific utilities that go beyond what standard BI dashboards offer.
+
+### 8.4 Databricks One
 
 Databricks One is a simplified portal for business users that surfaces AI/BI Dashboards, Genie spaces, and Databricks Apps without exposing the full technical workspace. It is freely available to all Databricks SQL customers. Global search now matches on dashboard content, page names, widget titles, and dataset queries.
 
-### 8.4 Enabling Genie on Your Gold Tables
+### 8.5 Enabling Genie on Your Gold Tables
 
 To get Genie working effectively against your Gold layer:
 
@@ -296,7 +308,33 @@ To get Genie working effectively against your Gold layer:
 
 ---
 
-## 9. Putting It All Together: End-to-End Data Flow
+## 9. Mosaic AI
+
+Mosaic AI is Databricks' integrated AI and machine learning platform, tightly coupled with Unity Catalog governance and serverless compute.
+
+### 9.1 Model Serving
+
+Model Serving provides scalable, serverless endpoints for deploying custom models and accessing Foundation Model APIs (including models from Meta, Anthropic, Mistral, and others). Endpoints support real-time inference, batch scoring, and A/B testing with automatic traffic routing. All endpoints are governed by Unity Catalog and secured by Lakeguard.
+
+### 9.2 Feature Engineering
+
+Unity Catalog feature tables replace the legacy Feature Store. Features are defined as standard Delta tables with primary key and timestamp metadata, enabling point-in-time lookups for training and real-time serving. Feature tables are discoverable, governed, and lineage-tracked like any other Unity Catalog asset.
+
+### 9.3 Vector Search
+
+Vector Search provides a serverless, managed vector database for retrieval-augmented generation (RAG) workflows. It automatically syncs embeddings from Delta tables and supports filtered similarity search. Vector Search indexes are Unity Catalog objects, inheriting access controls and lineage.
+
+### 9.4 AI Agent Framework
+
+The Databricks AI Agent Framework provides tools for building, evaluating, and deploying compound AI systems (agents) that combine LLMs with tools such as Unity Catalog functions, retrieval, and code execution. Agents can be logged, versioned, and served using Model Serving endpoints. The Agent Evaluation framework enables systematic quality assessment before production deployment.
+
+### 9.5 MLflow Integration
+
+MLflow is deeply integrated into the Databricks platform for experiment tracking, model versioning, and the model registry (via Unity Catalog). Models registered in Unity Catalog carry lineage, governed tags, and access controls — enabling the same governance framework used for data to extend to AI assets.
+
+---
+
+## 10. Putting It All Together: End-to-End Data Flow
 
 ```
 âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
@@ -362,7 +400,7 @@ To get Genie working effectively against your Gold layer:
 
 ---
 
-## 10. What's New and What's Coming
+## 11. What's New and What's Coming
 
 | Feature | Status (Mar 2026) |
 |---|---|
@@ -389,7 +427,7 @@ To get Genie working effectively against your Gold layer:
 
 ---
 
-## 11. Key References
+## 12. Key References
 
 - [Lakeflow Connect Documentation](https://docs.databricks.com/aws/en/ingestion/lakeflow-connect/)
 - [Spark Declarative Pipelines](https://docs.databricks.com/aws/en/ldp/)

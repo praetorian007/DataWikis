@@ -83,7 +83,7 @@ This document is intended for the IT Architecture Review Board (ARB), data platf
 | DABs | Databricks Asset Bundles |
 | AUTO CDC | Lakeflow API for applying change data capture (replaces APPLY CHANGES) |
 | Dataflowspec | A Delta table that holds runtime pipeline specifications, as defined in the DLT-META pattern |
-| PRIS Act | Public Register Information Safeguard Act 2024 (WA) |
+| PRIS Act | Privacy and Responsible Information Sharing Act 2024 (WA) |
 | SOCI Act | Security of Critical Infrastructure Act 2018 (Cth) |
 
 ### 1.5 Referenced Documents
@@ -129,6 +129,13 @@ The framework must adhere to the EDAP naming conventions for Unity Catalog objec
 The framework must be implemented using Databricks Lakeflow Streaming Declarative Pipelines (formerly Delta Live Tables). Pipeline logic is expressed using `CREATE STREAMING TABLE`, `CREATE MATERIALIZED VIEW`, and the AUTO CDC APIs in SQL or Python â not custom YAML or imperative Spark code.
 
 **API migration note:** Databricks now recommends the AUTO CDC APIs (`AUTO CDC INTO`, `create_auto_cdc_flow`) as replacements for the APPLY CHANGES APIs. Both have the same syntax. The EDAP framework should target the AUTO CDC APIs for new development while remaining compatible with environments where only the APPLY CHANGES APIs are available.
+
+**Compute model:** Lakeflow Declarative Pipelines supports both serverless compute and classic (job cluster) compute. Serverless compute eliminates cluster management overhead, provides faster startup times, and simplifies cost attribution. For the EDAP framework, serverless compute is the **recommended default** for new pipelines, subject to the following considerations:
+
+- Serverless is appropriate for the majority of Raw-to-Base and Base-to-Enriched pipelines where compute requirements are standard.
+- Classic compute should be used where pipelines require specific Spark configurations not available in serverless mode, custom library dependencies, or deterministic cluster sizing for cost-sensitive workloads.
+- The choice between serverless and classic should be configurable per data flow group in the Dataflowspec, defaulting to serverless.
+- Cost observability (NFR-CST-01, NFR-CST-02) applies equally to both compute models.
 
 **Pipeline chaining constraint:** Lakeflow SDP currently does not allow a streaming table created via AUTO CDC (SCD Type 2) to be used as a streaming source in a downstream pipeline without enabling `skipChangeCommits`. This constraint affects Base â Enriched pipeline chaining where the Base Zone table uses SCD Type 2. The framework must account for this â either by setting `skipChangeCommits`, reading the target as a batch source, or structuring pipelines to avoid streaming from SCD Type 2 targets.
 
@@ -296,7 +303,14 @@ These requirements apply to the framework engine regardless of which zone transi
 | FR-TAG-02 | The framework shall support applying tags at catalog, schema, and table level. Shared values should be set at the highest applicable level. | Should Have |
 | FR-TAG-03 | Tag values shall be sourced from the entity configuration, with defaults derived from the zone transition type. | Must Have |
 
-### 3.8 Sink and Output Routing
+### 3.8 Data Contract Enforcement
+
+| ID | Requirement | Priority |
+|---|---|---|
+| FR-CTR-01 | The framework shall validate pipeline output against the declared data contract schema for each entity, where a contract is defined. Validation shall confirm that all contracted columns are present, data types match, and nullable constraints are honoured. Schema violations shall be logged and optionally configured to fail the pipeline. | Should Have |
+| FR-CTR-02 | The framework shall emit contract compliance metrics for each entity where a data contract is defined, including: schema match result (pass/fail), freshness (time since last successful update vs contracted SLA), and quality score (DQ pass rate vs contracted threshold). These metrics shall be queryable from the pipeline event log or a dedicated contract compliance table. | Should Have |
+
+### 3.9 Sink and Output Routing
 
 | ID | Requirement | Priority |
 |---|---|---|
@@ -466,7 +480,22 @@ Produces wide, denormalised datasets optimised for data science, exploration, an
 | NFR-MNT-06 | The framework shall provide an onboarding workflow (CLI, notebook, or API) that translates configuration into the Dataflowspec Delta table. | Must Have |
 | NFR-MNT-07 | Adding or modifying an entity and re-onboarding shall not require downtime for existing pipeline entities. The onboarding process shall support both overwrite and append modes. | Should Have |
 
-### 5.7 Error Handling and Recovery
+### 5.7 Data Observability
+
+| ID | Requirement | Priority |
+|---|---|---|
+| NFR-DOB-01 | The framework shall integrate with Databricks Lakehouse Monitoring for automated data profiling of target tables, enabling drift detection, statistical summaries, and anomaly identification without custom instrumentation. | Should Have |
+| NFR-DOB-02 | The framework shall support configurable freshness SLA monitoring per entity. When a target table's last update timestamp exceeds the configured freshness threshold, the framework shall emit an alert via the standard alerting mechanism. Freshness thresholds shall be configurable per entity in the Dataflowspec. | Should Have |
+| NFR-DOB-03 | The framework shall support volume anomaly detection per entity. When the record count for a pipeline run deviates from historical norms by more than a configurable threshold (e.g. percentage deviation from the rolling average), the framework shall emit a warning alert. This guards against silent data loss, upstream source failures, and unexpected volume spikes. | Should Have |
+
+### 5.8 Cost Management
+
+| ID | Requirement | Priority |
+|---|---|---|
+| NFR-CST-01 | The framework shall support cost attribution per entity or data flow group, enabling the platform team to allocate compute and storage costs to the owning domain or data product. Cost attribution may be implemented through cluster tagging, pipeline tagging, or integration with Databricks system tables for billing analysis. | Should Have |
+| NFR-CST-02 | The framework shall provide DBU consumption observability per pipeline, enabling the platform team to monitor and optimise compute spend. Pipeline-level DBU metrics shall be queryable from Databricks system tables or the pipeline event log. | Should Have |
+
+### 5.9 Error Handling and Recovery
 
 | ID | Requirement | Priority |
 |---|---|---|
@@ -614,7 +643,7 @@ The following describes the logical processing sequence. The same sequence appli
 | ID | Question | Decision Owner | Status |
 |---|---|---|---|
 | OQ-01 | Should the EDAP framework adopt DLT-META as its foundation, use it as a reference architecture, or build independently? See Appendix A for the full gap analysis and adoption strategy options. | Architecture / Platform Team | Open |
-| OQ-02 | How should the framework reconcile Lakeflow AUTO CDC managed columns (`__START_AT`, `__END_AT`) with the EDAP convention (edap_eff_from, edap_eff_to, edap_is_current)? Options: (a) map in post-processing, (b) custom SCD logic bypassing AUTO CDC, (c) carry both. | Architecture / Data Engineering | Open |
+| OQ-02 | How should the framework reconcile Lakeflow AUTO CDC managed columns (`__START_AT`, `__END_AT`) with the EDAP convention (edap_eff_from, edap_eff_to, edap_is_current)? Options: (a) map in post-processing, (b) custom SCD logic bypassing AUTO CDC, (c) carry both. **Recommendation:** Option (a) â map Lakeflow-managed columns to EDAP columns in a post-processing view or within the pipeline definition. Retain `__START_AT` and `__END_AT` as the physical columns managed by Lakeflow AUTO CDC, and expose `edap_eff_from`, `edap_eff_to`, and `edap_is_current` as logical columns via a view layer or computed columns in the pipeline output step. This preserves Lakeflow's native SCD management (avoiding the maintenance burden of option (b)) while presenting a consistent EDAP interface to consumers. The view layer also provides a natural point for deriving `edap_is_current` (which Lakeflow does not natively manage) from `__END_AT IS NULL` or equivalent logic. | Architecture / Data Engineering | Open â Recommendation provided |
 | OQ-03 | How should the framework handle schema evolution in the Raw Zone? Automatic propagation or explicit configuration required? | Architecture / Data Engineering | Open |
 | OQ-04 | What is the DQ threshold for pipeline alerting? Configurable per entity? | Data Governance / Product Owner | Open |
 | OQ-05 | Should the framework support partial reprocessing (specific date ranges or batches) or only full entity reprocessing? | Data Engineering | Open |

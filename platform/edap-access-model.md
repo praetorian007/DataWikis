@@ -92,11 +92,35 @@ Schemas within each domain catalog align to the EDAP medallion architecture:
 
 | Schema | Medallion Layer | Description |
 |---|---|---|
-| `raw` | Raw / Landing | Ingested data in original form. Append-only. |
+| `raw` | Raw | Ingested data in original form. Append-only. |
 | `base` | Base / Bronze | Cleansed, typed, and conformed. SCD Type 1/2 applied. `edap_hash` change detection. |
 | `curated` | Silver | Business logic applied. Conformed dimensions and facts. Domain-specific transformations. |
 | `product` | Gold | Certified data products. Published via data contracts. FAUQD-tested. |
 | `sandbox` | N/A | Domain team experimentation space. Not promoted to production. |
+
+> **Landing Zone implementation:** The Landing Zone is not a schema but is implemented using **Unity Catalog Volumes** within each domain catalog. Files from source systems are staged in managed or external Volumes (e.g. `/Volumes/prod_asset/raw/landing/`) before being ingested into `raw` schema tables via Auto Loader or Lakeflow Connect. Volumes provide governed, access-controlled file storage that replaces legacy DBFS mounts.
+
+#### Sandbox Governance
+
+The `sandbox` schema in each domain catalog provides a space for experimentation, but is subject to the following guardrails:
+
+- **Retention policy:** Objects in sandbox schemas are subject to a 90-day retention policy. Objects older than 90 days are flagged for deletion and removed after a 14-day grace period unless explicitly extended by the domain steward.
+- **Read access to production:** Sandbox users may be granted read-only access to `base`, `curated`, and `product` schemas within their domain to enable experimentation against real data. This access is governed by the same ABAC policies as any other query.
+- **Storage quotas:** Each domain's sandbox schema has a storage quota (set via cluster policies and monitoring) to prevent runaway experimentation from consuming excessive storage. Quotas are reviewed quarterly.
+- **Promotion path:** Successful sandbox experiments that should become production assets must follow the standard pipeline promotion path: code is committed to source control, deployed via DABs through dev â staging â prod, and outputs land in the appropriate medallion schema (`base`, `curated`, or `product`). Direct promotion from sandbox to production is not permitted.
+- **No PI in sandbox:** Sandbox schemas must not contain unmasked Personal Information. If PI is required for experimentation, anonymised or synthetic datasets (per ADR-EDP-001) must be used.
+
+#### Schema-to-Medallion Zone Mapping
+
+The following table provides an explicit mapping between EDAP schema names and the medallion architecture zones described in the companion Medallion Architecture document:
+
+| Medallion Zone | EDAP Schema | Implementation |
+|---|---|---|
+| Landing Zone | *(Unity Catalog Volumes)* | Files land in managed or external Volumes within the domain catalog (e.g. `prod_asset.raw` volume paths). Not persisted as tables. |
+| Raw | `raw` | Append-only Delta tables preserving source data as received. |
+| Silver Base | `base` | Cleansed, typed, conformed data with SCD and `edap_hash` change detection. |
+| Silver Enriched | `curated` | Business logic applied, cross-source joins, conformed dimensions and facts. |
+| Gold | `product` | Certified data products published via data contracts. |
 
 ---
 
@@ -301,7 +325,7 @@ Unity Catalog requires compute that supports its access control model:
 | SQL Warehouse (Serverless) | Shared | Analyst queries, BI tool connections, ad-hoc SQL |
 | Shared Cluster | Shared | Multi-user notebooks, lightweight engineering |
 | Dedicated Cluster | Single User | ML training, PI-authorised workloads requiring fine-grained access |
-| Serverless Compute | Shared | DLT pipelines, jobs |
+| Serverless Compute | Shared | Lakeflow Declarative Pipelines, jobs |
 
 > **ABAC requirement:** ABAC policies require Databricks Runtime 16.4 or above, or serverless compute. Older runtimes cannot access ABAC-protected tables.
 
@@ -335,6 +359,18 @@ The central platform team monitors for:
 - Anomalous create/alter/delete operations on securables
 - Classification gaps â objects without `sensitivity` or `pi_category` tags
 - ABAC policy conflicts or evaluation errors
+
+### 10.4 Break-Glass (Emergency) Access
+
+In incident scenarios requiring urgent access to data outside normal privilege grants, the following break-glass procedure applies:
+
+1. **Request:** The requester raises an emergency access request through the IT service management tool, citing the incident reference and the specific data assets required.
+2. **Approval:** A member of `edap_platform_admins` or the relevant domain executive owner approves the request. Two-person approval is required for `privileged`-classified data.
+3. **Provisioning:** Temporary access is granted via time-limited group membership (managed through Azure AD / Entra ID with an automatic expiry, typically 4â8 hours).
+4. **Audit:** All break-glass access events are flagged in the audit log with a dedicated tag. The platform team reviews all break-glass events weekly.
+5. **Revocation:** Access is automatically revoked at expiry. Manual early revocation is performed if the incident is resolved sooner.
+
+> **Important:** Break-glass access does not bypass ABAC policies or Unity Catalog governance. It grants temporary membership in an authorised group, ensuring all access is still logged and filtered.
 
 ---
 

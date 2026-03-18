@@ -92,6 +92,8 @@ The Design stage translates business requirements into a technical and visual bl
 
 - **Self-Service Design** – Define the boundary between curated content (pre-built dashboards with governed metrics) and self-service exploration (user-created reports built on top of the semantic layer). The goal is to empower users to explore independently while preventing incorrect or misleading results. The semantic layer is the guardrail that makes self-service safe.
 
+- **Managing Multiple Semantic Layers** – In practice, most enterprise BI environments operate with more than one semantic layer — the Power BI Tabular model (with DAX measures, hierarchies, and relationships) and the Databricks AI/BI semantic model (serving Genie, AI agents, and SQL-based analytics) coexist, and each has its own strengths. The key design decision is which layer is authoritative for each metric. The recommended approach is to designate one layer as the "source of truth" for each critical metric definition and treat the other as a consumer or derivative. Where Power BI is the primary consumption tool, the Power BI Tabular model is typically authoritative for BI-facing metrics, with the Databricks AI/BI layer aligned to match. Where metrics must serve both BI dashboards and AI agents or programmatic consumers, the Databricks semantic layer may be authoritative, with Power BI consuming via Direct Lake or DirectQuery. Regardless of the choice, maintain a metric reconciliation process: automated tests that compare key metrics across both layers on a regular cadence to detect and prevent semantic drift. Document the authoritative source for each metric in the business glossary.
+
 - **Data Contract with Data Engineering** – Formalise the data contract between the BI solution and the data engineering team. What Gold-layer data products does this BI solution consume? What are the freshness, quality, and availability SLAs? What happens when upstream data is late or incomplete? Defining this contract explicitly prevents the all-too-common failure where a dashboard breaks because an upstream pipeline changed without notice.
 
 **The Limitation of Reports:**
@@ -125,6 +127,8 @@ The critical interface between BI and data engineering is the **Gold layer** of 
 - **Security and Access Control** – Implementing row-level security (RLS), column-level security, workspace access controls, and data classification labels to ensure that users see only the data they are authorised to access. Security must be designed into the semantic model, not layered on at the report level.
 - **Performance Optimisation** – Optimising query performance through aggregation tables, incremental refresh, caching strategies, composite models (import + Direct Lake/DirectQuery), and appropriate data compression. Poorly performing reports destroy adoption.
 
+- **Power BI Direct Lake Mode** – Direct Lake is a storage mode in Power BI that reads Delta tables directly from the lakehouse without importing data into the Power BI model or issuing DirectQuery queries at runtime. It combines the performance characteristics of Import mode (data cached in the VertiPaq engine) with the freshness of DirectQuery (no ETL copy required), because the engine reads directly from Delta/Parquet files in storage. Direct Lake is the preferred mode when BI solutions consume from Gold-layer Delta tables in the medallion architecture — it eliminates the data duplication inherent in Import mode and avoids the query performance limitations of DirectQuery against large datasets. Direct Lake works best with well-structured Gold-layer star schemas where tables are optimised for analytical queries (appropriate file sizes, liquid clustering, and Z-ordering). It differs from DirectQuery in that it does not push queries to the source engine at runtime (reducing source system load), and from Import in that it does not require scheduled refresh to ingest data (the model reflects the latest Delta table state automatically). Use Direct Lake as the default for Gold-layer consumption in Power BI; fall back to Import for small reference tables or scenarios requiring complex DAX that Direct Lake does not yet fully support, and to DirectQuery only where real-time source system queries are genuinely required.
+
 **Guidance:**
 
 - BI solutions must be built on the Gold layer. Building reports directly against Bronze or Silver data bypasses data quality enforcement and creates ungoverned, inconsistent outputs.
@@ -153,6 +157,8 @@ The Visualise stage is where insight is delivered to consumers. It transforms th
 - **Embedded Analytics** – Integrating BI visualisations and metric queries directly into operational applications and business workflows, so that users encounter data-driven insights in the context of their daily work rather than switching to a separate BI tool.
 
 - **Interactive Features** – Implementing filters, slicers, drill-through, tooltips, bookmarks, and personalised views that enable users to explore data dynamically and customise their experience.
+
+- **Action Triggers and Decision Intelligence** – The most advanced BI implementations go beyond visualisation to trigger downstream actions when thresholds are breached or anomalies detected. This is the "decision intelligence" action layer: a dashboard that detects an asset health metric dropping below threshold can automatically raise a ServiceNow incident ticket; a Power Automate flow can notify the responsible team and initiate an investigation workflow; a Databricks workflow can trigger a predictive model re-run or data quality investigation. The BI tool becomes not just a lens for viewing data but an orchestrator that connects insight to action — closing the loop between "we can see the problem" and "we are doing something about it." Design these action triggers with clear ownership, escalation paths, and audit trails to prevent alert fatigue and ensure accountability.
 
 **Guidance:**
 
@@ -244,6 +250,17 @@ Foster continuous communication between business users, data engineers, BI devel
 
 ---
 
+### Accessibility
+
+BI solutions must be accessible to all users, including those with disabilities. For a government entity, this is both a legal obligation and a matter of equitable service delivery. Key considerations:
+
+- **WCAG 2.1 AA compliance** – Ensure that dashboards and reports meet the Web Content Accessibility Guidelines (WCAG) 2.1 at Level AA. This includes sufficient colour contrast ratios, keyboard navigability, meaningful alt text for visual elements, and logical reading order.
+- **Colour-blind-safe palettes** – Design visualisations using colour palettes that are distinguishable by users with colour vision deficiencies (approximately 8% of males). Avoid relying on colour alone to convey meaning — supplement with patterns, labels, or icons. Tools like ColorBrewer and the Coblis colour blindness simulator assist in validation.
+- **Screen reader compatibility** – Structure dashboards so that screen readers can convey the key insights: use descriptive titles, provide text alternatives for charts, and ensure that data tables are properly structured with headers. Power BI's accessibility features (alt text on visuals, tab order configuration, high-contrast themes) should be configured for all production dashboards.
+- **Inclusive design reviews** – Include accessibility testing in the standard review process before go-live. Conduct testing with assistive technologies (screen readers, keyboard-only navigation) and, where possible, with users who rely on these technologies.
+
+---
+
 ### Continuous Improvement
 
 BI solutions are products, not projects. They require ongoing investment: regular review of relevance and usage, iterative refinement of visualisations and metrics, technology upgrades, and adaptation to evolving business questions. Establish a continuous improvement cadence – not a "Version 2.0" project that starts two years after launch, but a steady stream of small, user-driven improvements delivered through an agile backlog. In a SAFe environment, BI improvement work should flow as stories within domain-driven business epics, prioritised alongside data engineering and data science work to ensure alignment across all three lifecycles.
@@ -280,8 +297,8 @@ The BI lifecycle is fundamentally about connecting data to decisions. The stages
 
 The BI lifecycle exists to ensure that the significant investment in data engineering, data governance, and data platform infrastructure translates into decisions, actions, and outcomes. Data that is not used is cost without return. BI is how we close the loop.
 
-The three lifecycles – Data Engineering, Business Intelligence, and Data Science – form a coherent whole. Data engineering provides the foundation; BI turns data into decisions; data science turns data into intelligence. Together, they represent the enterprise data capability.
+The four lifecycles – Data Engineering, Business Intelligence, Data Science, and Data Governance – form a coherent whole. Data engineering provides the foundation; BI turns data into decisions; data science turns data into intelligence; and data governance ensures that all three operate on a foundation of trust, quality, and accountability. Together, they represent the enterprise data capability.
 
 ---
 
-*This document complements the Data Engineering Lifecycle and the Data Science Lifecycle and is designed for an enterprise context. Last updated February 2026.*
+*This document complements the Data Engineering Lifecycle and the Data Science Lifecycle and is designed for an enterprise context. Last updated March 2026.*

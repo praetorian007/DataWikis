@@ -10,7 +10,11 @@
 
 Data governance is the framework of policies, processes, roles, and standards that ensures data is managed as a strategic enterprise asset: discoverable, understandable, trustworthy, secure, and used responsibly. It is not a project with a start and end date, nor a compliance checkbox exercise; it is a continuously operating discipline that enables and protects every other data activity in the organisation.
 
-This document outlines the stages, roles, operating model, and contemporary practices involved in the data governance lifecycle as it applies to Water Corporation's Enterprise Data & Analytics Platform (EDAP). While the principles described here have broad applicability, the governance model, classification framework, role definitions, and platform-specific guidance are designed specifically for the EDAP context: a Databricks lakehouse architecture with Unity Catalog as the governance hub, Alation as the enterprise discovery layer, a medallion (Bronze/Silver/Gold) data organisation model, and a federated domain ownership structure aligned to SAFe Agile delivery.
+This document outlines the stages, roles, operating model, and contemporary practices involved in the data governance lifecycle as it applies to Water Corporation's Enterprise Data & Analytics Platform (EDAP). While the principles described here have broad applicability, the governance model, classification framework, role definitions, and platform-specific guidance are designed specifically for the EDAP context: a Databricks lakehouse architecture with Unity Catalog as the governance hub, Alation as the enterprise discovery layer, a medallion (Bronze/Silver/Gold) data organisation model with zone decomposition (Landing, Raw, Processed, Base, Protected, Enriched, Exploratory, BI, Sandbox), and a federated domain ownership structure aligned to SAFe Agile delivery.
+
+This document should be read alongside the **Medallion Architecture** document, which defines the zone structure, Unity Catalog namespace conventions, data quality framework, audit column standards, and pipeline development patterns that this governance lifecycle governs over. Where the Medallion Architecture describes *how data flows and is structured*, this document describes *how data is governed, classified, owned, and protected* as it moves through those structures.
+
+> **Naming convention note:** The programme is referred to as **EDAP** (Enterprise Data & Analytics Platform) throughout this document and in programme-level governance artefacts. The Unity Catalog namespace prefix is **`edp_`** (Enterprise Data Platform), as defined in the Medallion Architecture document (e.g. `edp_bronze`, `edp_silver`, `edp_gold`, `edp_sandbox`). Similarly, audit columns use the `edp_` prefix (e.g. `edp_batch`, `edp_hash`) and data quality annotation columns use the `dq_` prefix (e.g. `dq_status`, `dq_flags`). These namespace and column conventions are technical standards governed by this lifecycle and defined in the Medallion Architecture document.
 
 This document is designed to complement the Data Engineering Lifecycle, the Business Intelligence Lifecycle, and the Data Science Lifecycle. Governance is the connective tissue that binds them. Where data engineering is concerned with getting data *right*, BI with getting data *used*, and data science with getting data to *learn*, governance is concerned with ensuring data is *trusted, understood, and managed responsibly* across all three.
 
@@ -22,15 +26,32 @@ The lifecycle is not strictly linear. Classification informs access control, whi
 
 ---
 
+## Governance Stages at a Glance
+
+| Stage | Description |
+|-------|-------------|
+| **1. Discovery and Classification** | Inventory data assets across the EDAP and assign sensitivity, regulatory, and domain classifications that determine handling and access. |
+| **2. Policy and Standards Definition** | Establish the authoritative rules, principles, and technical standards that govern how data is managed, encoded as policy-as-code where possible. |
+| **3. Data Contracts** | Formalise producer-consumer agreements that make data product commitments explicit, measurable, and enforceable in CI/CD. |
+| **4. Data Quality Management** | Ensure data is accurate, complete, timely, and valid through embedded pipeline assertions, observability, and the "Propagate, Don't Drop" principle. |
+| **5. Metadata Management and Cataloguing** | Maintain rich, machine-readable metadata (business, technical, operational, governance, semantic) that makes data discoverable and trustworthy. |
+| **6. Access Control and Security Governance** | Determine who can access what data, under what conditions, enforced through ABAC in Unity Catalog with full audit trails. |
+| **7. Data Lifecycle Management** | Govern data from creation through active use, archival, and deletion, aligned to regulatory retention requirements and business value. |
+| **8. Compliance and Regulatory Governance** | Ensure data management practices meet all applicable legal and regulatory obligations (SOCI Act, PRIS Act, WAICP, State Records Act, Essential Eight). |
+| **9. AI and Model Governance** | Govern AI models, agents, and knowledge bases with risk classification, mandatory documentation, human oversight, and action boundary controls. |
+| **10. Continuous Improvement** | Measure governance effectiveness through KPIs, conduct regular reviews, and drive iterative improvement across all governance dimensions. |
+
+---
+
 ## What is Data Governance?
 
 Data governance is the exercise of authority, control, and shared decision-making over the management and use of data assets. It defines who can make what decisions about data, using what processes, guided by what standards, and measured against what outcomes.
 
 In practice, this means governance establishes the rules of the road: who owns which data, how it is classified and protected, what quality standards it must meet, how it is documented and discovered, who can access it and under what conditions, how long it is retained, and how disputes about data definitions and usage are resolved. Governance does not build pipelines or create dashboards. It creates the conditions under which pipelines and dashboards produce trustworthy results.
 
-The role of governance has matured significantly. A modern governance programme is expected to be **enabling rather than constraining**, reducing friction for data consumers while maintaining the controls necessary for regulatory compliance, security, and trust. The best governance programmes are invisible to consumers when things are working well: data is discoverable, access is granted efficiently, quality is consistently high, and classifications are accurate. Governance only becomes visible when something goes wrong , and good governance ensures that happens less often.
+The role of governance has matured significantly. A modern governance programme is expected to be **enabling rather than constraining**, reducing friction for data consumers while maintaining the controls necessary for regulatory compliance, security, and trust. The best governance programmes are invisible to consumers when things are working well: data is discoverable, access is granted efficiently, quality is consistently high, and classifications are accurate. Governance only becomes visible when something goes wrong â and good governance ensures that happens less often.
 
-The shift from "governance as bureaucracy" to "governance as platform capability" is well underway. In 2026, the most effective governance programmes are those that encode policies as automated, enforceable rules within the data platform itself (data contracts, attribute-based access control, automated classification propagation, quality assertions embedded in pipelines) rather than, automated classification propagation, quality assertions embedded in pipelines) rather than relying on manual review processes, approval chains, and governance boards that meet monthly to rubber-stamp decisions already made.
+The shift from "governance as bureaucracy" to "governance as platform capability" is well underway. In 2026, the most effective governance programmes are those that encode policies as automated, enforceable rules within the data platform itself (data contracts, attribute-based access control, automated classification propagation, quality assertions embedded in pipelines) rather than relying on manual review processes, approval chains, and governance boards that meet monthly to rubber-stamp decisions already made.
 
 The guiding philosophy is **"open by default, restricted by exception."** Data should be accessible, discoverable, and usable unless there is a specific, documented reason to restrict it. The burden of proof lies with restriction, not access. This philosophy accelerates data-driven decision-making while maintaining the precision controls needed for sensitive, regulated, and security-critical data.
 
@@ -44,9 +65,9 @@ Data governance does not operate in isolation. It is a cross-cutting discipline 
 
 **Data Governance â BI Lifecycle:** Governance ensures that the metrics, dimensions, and data products consumed by BI are defined consistently, classified correctly, and accessed appropriately. The semantic layer and business glossary, both essential BI infrastructure, are governance artefacts maintained by stewards and consumed by analysts. Governance prevents the proliferation of conflicting metric definitions ("which revenue number is right?") by establishing single sources of truth.
 
-**Data Governance â Data Science Lifecycle:** Governance defines the ethical, privacy, and compliance boundaries within which data science operates: what data can be used for model training, how PII must be handled, how model outputs are classified and governed as new data products, and how bias and fairness considerations are embedded in the data supply chain. Feature stores and ML training datasets are governed data products.
+**Data Governance â Data Science Lifecycle:** Governance defines the ethical, privacy, and compliance boundaries within which data science operates: what data can be used for model training, how personal information must be handled, how model outputs are classified and governed as new data products, and how bias and fairness considerations are embedded in the data supply chain. Feature stores and ML training datasets are governed data products. **ML model outputs (predictions, scores, recommendations) are themselves data products** and must be governed accordingly: they require sensitivity classification (model outputs derived from PI-classified inputs inherit that classification), domain ownership (assigned to the domain that owns the use case, not the data science team), data contracts (defining schema, freshness, and accuracy commitments to downstream consumers), and quality monitoring (model drift detection, prediction accuracy tracking). Models registered in Unity Catalog are governed assets with lineage tracing back to their training data, enabling compliance auditing of the full data-to-prediction chain. The Data Science Lifecycle document provides detailed treatment of model governance; this governance lifecycle establishes the framework within which that model governance operates.
 
-**The Shared Foundation:** All four lifecycles share a common data platform (the lakehouse), a common governance framework (Unity Catalog, data contracts, data quality standards), and common cross-cutting concerns (security, compliance, metadata). The key principle is **separation of concerns with tight collaboration**: governance sets the rules, engineering implements them, BI and data science operate within them, and all four lifecycles feed back into continuous governance improvement.
+**The Shared Foundation:** All four lifecycles share a common data platform (the lakehouse), a common governance framework (Unity Catalog, data contracts, data quality standards), and common cross-cutting concerns (security, compliance, metadata). The **Medallion Architecture** document defines the platform foundation that all four lifecycles operate on: the zone structure (Landing through BI), the Unity Catalog namespace conventions, the audit column and DQ annotation standards, the data quality framework ("Propagate, Don't Drop"), and the pipeline development patterns. This governance lifecycle governs *over* that platform foundation â it does not redefine it. Where the Medallion Architecture makes a platform design decision (e.g. zone boundaries, namespace conventions, DQ column standards), this governance lifecycle defines the governance controls, roles, and policies that operate within that design. The key principle is **separation of concerns with tight collaboration**: governance sets the rules, engineering implements them, BI and data science operate within them, and all four lifecycles feed back into continuous governance improvement.
 
 ---
 
@@ -78,7 +99,7 @@ Not all data products warrant the same level of governance rigour. Over-governin
 
 **Tier 3: Exploratory / Sandbox Data Products.** Experimental, analyst-created, or prototype data products not yet promoted to domain or enterprise status. These require basic metadata (owner, description, creation date) and sensitivity classification, but are exempt from formal data contracts, SLOs, and change management processes. Exploratory products that prove valuable are promoted to Tier 2 or Tier 1 through a defined promotion process that adds the required governance controls.
 
-**The FAUQD Test:** A data product is ready for promotion when it is **Findable** (catalogued and discoverable), **Accessible** (consumers can access it through governed channels), **Understandable** (documented with clear semantics), **Quality-assured** (automated quality checks in place), and **Dependable** (SLOs defined and met). This test applies at promotion from Tier 3 to Tier 2 and from Tier 2 to Tier 1, with increasing stringency at each level.
+**The Five Gates Test:** A data product is ready for promotion when it is **Findable** (catalogued and discoverable), **Accessible** (consumers can access it through governed channels), **Understandable** (documented with clear semantics), **Quality-assured** (automated quality checks in place), and **Dependable** (SLOs defined and met). This test applies at promotion from Tier 3 to Tier 2 and from Tier 2 to Tier 1, with increasing stringency at each level.
 
 ---
 
@@ -110,27 +131,40 @@ The EDAP Tagging Strategy defines a four-layer tagging model for data platform g
 - **Layer 2: Sensitivity Reason.** Explains *why* data is sensitive, which is what drives specific technical controls. Includes PII indicators (`pii_contained`, `pii_type` at column level), regulatory scope (PRIS Act, SOCI Act, State Records Act), and granular sensitivity types (personal information, infrastructure vulnerability, commercial in confidence, indigenous cultural, and others). A single data asset may carry multiple sensitivity reasons simultaneously. This layer answers the question WAICP cannot: "sensitive *because of what*?"
 - **Layer 3: Access and Handling.** Translates the classification and sensitivity reason into concrete Unity Catalog enforcement actions: access model (open, controlled, restricted, privileged), column masking requirements, sharing permissions, encryption at rest, and retention periods. This is the layer where classification decisions become platform-enforced controls.
 
-A fourth layer, **Layer 4: Data Management**, carries operational metadata (medallion layer, source system, refresh frequency, ingestion method, data product identifier, and others). This layer supports platform operations and discoverability rather than security classification.
+A fourth layer, **Layer 4: Data Management**, carries operational metadata that supports platform operations and discoverability rather than security classification. This layer includes the `source_system` tag (provenance marker identifying the originating system), medallion zone indicator (aligned to the EDAP's zone decomposition: Landing, Raw, Processed, Base, Protected, Enriched, Exploratory, BI), refresh frequency, ingestion method, data product identifier, and related operational attributes. Layer 4 tags align with the Unity Catalog namespace conventions defined in the Medallion Architecture document (e.g. `edp_bronze.<source_system>`, `edp_silver.<source_system|subject_area>`, `edp_gold.<domain>`).
 
-**Where Domain Ownership Sits, and Where It Does Not:**
+**Separating Provenance from Domain Ownership:**
 
-A critical design question is whether "domain" is a classification attribute (something you stamp on a dataset at the point of ingestion) or an ownership relationship that emerges as data is understood, transformed, and shaped into products. The answer, informed by both data mesh best practice and the practical reality of how source systems map (or fail to map) to business domains, is that **domain ownership is not a classification layer. It is a governance relationship that is assigned at the point where business meaning is established, which in the EDAP's medallion architecture is the Silver layer, not Bronze.**
+A critical design principle is that **provenance and domain ownership are fundamentally different concerns and must be expressed as separate tags.** Source system boundaries and business domain boundaries are different things. SAP ECC contains financial data, asset data, HR data, and procurement data. A SCADA historian covers both water quality telemetry (potentially public health sensitive, owned by Operations or a Water Quality domain) and pump performance telemetry (operational, owned by Asset Management or Operations). Maximo work orders span Asset Management (the asset being maintained), Operations (the crew doing the work), and Finance (the cost centre being charged).
 
-The reasoning is straightforward. Source system boundaries and business domain boundaries are fundamentally different things. SAP ECC contains financial data, asset data, HR data, and procurement data. A SCADA historian covers both water quality telemetry (potentially public health sensitive, owned by Operations or a Water Quality domain) and pump performance telemetry (operational, owned by Asset Management or Operations). Maximo work orders span Asset Management (the asset being maintained), Operations (the crew doing the work), and Finance (the cost centre being charged). Forcing a business domain label onto a source-aligned Bronze table creates false precision; it implies a governance accountability that does not yet exist in a meaningful sense.
+The EDAP tagging model therefore uses two distinct tags to avoid semantic overloading:
 
-Data mesh literature reinforces this distinction. Zhamak Dehghani's original framework classifies domains as source-aligned, consumer-aligned, or aggregate. In a medallion lakehouse, these map naturally: Bronze is source-aligned (organised by source system, not business domain), Silver is where data is conformed and domain meaning is established, and Gold is consumer-aligned (optimised for specific analytical or operational use cases that may cross domain boundaries). The `data_domain` tag therefore has different semantics at each layer:
+- **`source_system`** (Layer 4: Data Management). Applied at ingestion. Identifies the originating system (e.g. `sap_ecc`, `scada`, `maximo`, `gis`). This is a permanent provenance marker that never changes. It answers the question "where did this data come from?" and is consistently meaningful at every medallion layer. The `source_system` tag is essential for impact analysis (when a source system schema changes, every table originating from that system is immediately identifiable), for lineage tracing, and for ingestion pipeline management. It is not a governance accountability assignment; it carries no implication of business ownership.
 
-- **Bronze (Raw).** The `data_domain` tag carries the **source system identifier** as a holding value (e.g. `sap_ecc`, `scada`, `maximo`). This is not a business domain assignment; it is a provenance marker that identifies the origin. At this layer, governance accountability for sensitivity classification, security, and access control is held by the **Technical Data Steward** responsible for the ingestion pipeline, not by a Domain Data Steward. The Technical Data Steward ensures the data is classified for sensitivity (Layers 1 through 3), that mandatory tags are applied, and that the `classification_status` lifecycle is initiated, but they are not making business domain ownership decisions.
-- **Silver (Base / Enriched).** Domain ownership is assigned here, at the point where raw source data is transformed into business-meaningful entities. The pipeline that transforms Bronze into Silver assigns the `data_domain` tag based on the business context of the resulting table. A single Bronze source may produce Silver tables in multiple domains; this is the multi-domain source system split. The **Domain Data Steward** takes accountability at this layer: they confirm the domain assignment, validate the business metadata, and own the quality and classification of the Silver data product. This is where governance transitions from "we know what system this came from" to "we know what this data means and who is accountable for it."
-- **Gold (BI / Exploratory / Sandbox).** The `data_domain` tag typically inherits from the Silver source. Where a Gold table joins data from multiple Silver domains, it is assigned to the *primary consuming domain* with contributing domains recorded in lineage metadata (via the `consuming_domain` tag). Domain accountability follows the consumer, not the producer.
+- **`data_domain`** (Governance relationship). Applied when business domain ownership is established, which in the EDAP's medallion architecture occurs at the **Silver Enriched Zone**, not Bronze or Silver Base. Values are business domains (e.g. `asset_management`, `customer`, `financial`, `workforce`, `operational`, `spatial`, `regulatory`). This tag carries governance weight: it determines which Domain Data Steward is accountable, which domain-level access policies apply, and which governance review cadence the data product falls under. The `data_domain` tag is not present at Bronze or Silver Base (or is explicitly set to `unassigned` where schema completeness requires a value). This is a single, unambiguous rule: domain ownership is assigned at the zone where business meaning is established and the Unity Catalog namespace transitions from source-system-aligned to subject-area-aligned.
 
-**The implication for the classification model is significant.** sensitivity classification (Layers 1 through 3) applies from the moment of ingestion: you must classify data for sensitivity before you understand its full business context, because you cannot defer security controls. But domain ownership is established progressively as data moves through the medallion layers and business meaning crystallises. These are different governance activities, performed by different roles, at different points in the data lifecycle.
+This separation ensures that each tag has a single, unambiguous meaning across all medallion layers. An ABAC policy referencing `data_domain` will never accidentally match Bronze tables that have not yet had ownership assigned. A lineage query can join `source_system` and `data_domain` to answer "which source systems feed which business domains?" without semantic confusion. AI agents querying governance metadata receive consistent, machine-interpretable signals regardless of which layer they are inspecting.
+
+**Where Domain Ownership Sits in the Medallion Architecture:**
+
+Domain ownership is not a classification attribute stamped on a dataset at the point of ingestion. It is a governance relationship that is assigned at the point where business meaning is established, which in the EDAP's medallion architecture is the **Silver Enriched Zone** â the zone where the Unity Catalog namespace transitions from source-system-aligned to subject-area-aligned. This is a deliberate design decision informed by both data mesh best practice and the practical reality of how source systems map (or fail to map) to business domains.
+
+Data mesh literature reinforces this distinction. Zhamak Dehghani's original framework classifies domains as source-aligned, consumer-aligned, or aggregate. In a medallion lakehouse, these map naturally: Bronze is source-aligned (organised by source system, not business domain), Silver is where data is conformed and domain meaning is established, and Gold is consumer-aligned (optimised for specific analytical or operational use cases that may cross domain boundaries). The governance model therefore operates differently at each layer:
+
+- **Bronze (Landing / Raw / Processed Zones).** Tables are organised by source system in the Unity Catalog namespace (`edp_bronze.<source_system>.<table>`). The `source_system` tag identifies provenance. The `data_domain` tag is not assigned (or is set to `unassigned`). Governance accountability for sensitivity classification, security, and access control is held by the **Technical Data Steward** responsible for the ingestion pipeline, not by a Domain Data Steward. The Technical Data Steward ensures the data is classified for sensitivity (Layers 1 through 3), that mandatory tags are applied, and that the `classification_status` lifecycle is initiated, but they are not making business domain ownership decisions. Sensitivity classification must never be deferred: you classify for security before you understand full business context.
+- **Silver Base Zone.** The Base Zone cleanses, deduplicates, and quality-annotates source data, but its Unity Catalog schemas remain **source-system-aligned** (`edp_silver.<source_system>.base_<entity>`, e.g. `edp_silver.sap.base_maintenance_order`). This is a critical nuance: although Silver Base Zone data is cleansed and trusted, the namespace and governance organisation still reflect the source system origin, not the business domain. The `data_domain` tag is **not assigned** at this zone; domain ownership is deferred to the Enriched Zone where business context is established through integration and enrichment. The **Technical Data Steward** retains primary governance accountability at this zone, with the **Domain Data Steward** consulted on business rule validation and quality rule definition. This clean boundary â Technical Data Steward governs Base, Domain Data Steward governs Enriched â eliminates ambiguity about who is accountable for what, and ensures that a catalog query for `data_domain = asset_management` returns a complete and consistent set of domain-owned tables.
+- **Silver Enriched Zone.** This is where domain ownership is definitively established. The Enriched Zone integrates Base Zone data from multiple source systems, applies business logic, and organises data by **subject area or business concept** (`edp_silver.<subject_area>.enr_<concept>`, e.g. `edp_silver.assets.enr_asset_health`). The pipeline that transforms Base into Enriched assigns the `data_domain` tag based on the business context of the resulting table. A single Base Zone source may produce Enriched tables in multiple domains; this is the multi-domain source system split in action. The **Domain Data Steward** takes full accountability at this zone: they confirm the domain assignment, validate the business metadata, and own the quality and classification of the Enriched data product. This is where governance transitions from "we know what system this came from and the data is clean" to "we know what this data means in business terms and who is accountable for it."
+- **Silver Protected Zone.** Personal Information (PI) and other protected data classified as OFFICIAL:SENSITIVE or higher is managed in the Protected Zone with Privileged Access Management (PAM) controls. Access is provided only when necessary and revoked automatically after task completion. The Protected Zone may produce synthetic identifiers or masked derivatives that are used in Base, Enriched, and Gold zones in place of the original PI. The `data_domain` tag is assigned based on the domain accountability for the underlying personal information (e.g. `customer` for customer PI). The **Domain Data Steward** and **Data Security Specialist** share governance accountability at this zone.
+- **Gold (Exploratory / BI Zones).** Gold schemas are organised by **business domain** (`edp_gold.<domain>.<table>`, e.g. `edp_gold.operations.bi_fact_work_order`). The `data_domain` tag typically inherits from the Silver Enriched source. Where a Gold table joins data from multiple Silver domains, it is assigned to the *primary owning domain* â the domain with the strongest accountability for the accuracy, quality, and governance of the resulting data product. Contributing source domains are recorded via a `contributing_domains` tag or in lineage metadata to preserve the full provenance chain. Where a Gold data product serves a cross-functional purpose (e.g. an executive dashboard joining Asset, Financial, and Operational data), it may be assigned to a `cross_domain` value with a nominated data product owner who is accountable for the composite product's governance, quality, and access control. The key principle is that every Gold data product has exactly one accountable owner, even when it draws from multiple domains.
+- **Sandbox.** The Sandbox layer (`edp_sandbox.<user_or_team>.<table>`) provides isolated experimentation environments. Sandbox data products are Tier 3 (Exploratory) by default and require basic metadata (owner, description, creation date) and sensitivity classification, but are exempt from formal data contracts and SLOs. Governance must be vigilant for **shadow pipelines** â unofficial transformations built in Sandbox that become load-bearing without governance. A formal promotion path from Sandbox to production zones (with the corresponding uplift in governance controls) must be established and enforced.
+
+**The implication for the classification model is significant.** Sensitivity classification (Layers 1 through 3) applies from the moment of ingestion: you must classify data for sensitivity before you understand its full business context, because you cannot defer security controls. But domain ownership is established progressively as data moves through the medallion zones and business meaning crystallises â from source-system-aligned schemas at Bronze and Silver Base, through subject-area-aligned schemas at Silver Enriched, to domain-aligned schemas at Gold. These are different governance activities, performed by different roles, at different points in the data lifecycle. Expressing them as separate tags (`source_system` for provenance, `data_domain` for ownership) makes this distinction explicit, machine-readable, and enforceable. The Unity Catalog namespace itself reinforces this progression: `edp_bronze.sap.*` â `edp_silver.sap.base_*` â `edp_silver.assets.enr_*` â `edp_gold.operations.bi_*`.
 
 **Could Domain Classification Happen at Field Level?**
 
 An alternative approach would be to classify domain ownership at the column or field level rather than the table level, recognising that a single source table may contain columns belonging to different business domains. For example, a Maximo work order table contains asset identifiers (Asset Management domain), cost centre codes (Finance domain), crew assignments (Workforce domain), and completion dates (Operations domain).
 
-While intellectually appealing, field-level domain classification introduces significant practical complexity: it multiplies the governance surface area, creates ambiguity about table-level ownership (who owns a table where four domains each claim columns?), and doesn't align with how Unity Catalog enforces access control (which operates primarily at table and column level for security, not for domain ownership). The pragmatic approach, and the one the EDAP tagging strategy adopts, is **table-level domain ownership with single-owner accountability**: one domain owns the table, is accountable for its quality and governance, and other domains subscribe as consumers. The ownership assignment is based on which domain has the strongest accountability for the data's accuracy and currency. A work order table is owned by Asset Management (accountable for work order data quality) even though Operations, Finance, and Workforce all consume it.
+While intellectually appealing, field-level domain classification introduces significant practical complexity: it multiplies the governance surface area, creates ambiguity about table-level ownership (who owns a table where four domains each claim columns?), and does not align with how Unity Catalog enforces access control (which operates primarily at table and column level for security, not for domain ownership). The pragmatic approach, and the one the EDAP tagging strategy adopts, is **table-level domain ownership with single-owner accountability**: one domain owns the table, is accountable for its quality and governance, and other domains subscribe as consumers. The ownership assignment is based on which domain has the strongest accountability for the data's accuracy and currency. A work order table is owned by Asset Management (accountable for work order data quality) even though Operations, Finance, and Workforce all consume it.
 
 Enterprise reference data that is genuinely cross-cutting (organisational hierarchy, location master, calendar, unit of measure) is assigned to `data_domain = enterprise_reference` with a nominated enterprise data steward, avoiding the orphan problem where no single business domain claims ownership.
 
@@ -138,13 +172,17 @@ Enterprise reference data that is genuinely cross-cutting (organisational hierar
 
 Classification is not a one-time label. Data assets move through a three-state classification lifecycle (tracked by the mandatory `classification_status` tag):
 
-- **Unclassified.** Newly ingested data that has not yet been reviewed by a steward. Sensitivity classification defaults are applied (WAICP defaults to OFFICIAL as a holding value), and the access posture is **restrictive by default**: only the ingesting domain team can see or query the data. This inverts the platform's normal "open by default" philosophy during the classification window, because you cannot apply "open by default" to data whose sensitivity you do not yet understand. Objects must transition out of Unclassified within 30 calendar days.
+- **Unclassified.** Newly ingested data that has not yet been reviewed by a steward. Sensitivity classification defaults are applied (WAICP defaults to OFFICIAL as a holding value), and the access posture is **restrictive by default**: only the ingesting domain team can see or query the data. This inverts the platform's normal "open by default" philosophy during the classification window, because you cannot apply "open by default" to data whose sensitivity you do not yet understand. This is one of the most important governance design decisions in the model: the "open by default" principle presupposes that classification has been completed and the data is understood. Unclassified data does not meet that precondition and must therefore be restricted until it does. Objects must transition out of Unclassified within 30 calendar days.
 - **Provisional.** Initial classification assigned by the relevant steward (Technical Data Steward for Bronze sensitivity classification; Domain Data Steward for Silver domain and business classification). The data becomes discoverable across the platform (metadata visible to all EDAP users), but query access requires an explicit request. Provisional classification must progress to Classified within 60 calendar days.
 - **Classified.** Full WAICP classification ratified, domain ownership confirmed, executive endorsement in place, access policies enacted in Unity Catalog. The standard "open by default, restricted by exception" philosophy applies. Data classified as unrestricted is broadly accessible; data classified as restricted is governed by the ABAC policies defined in Layer 3 tags.
 
+**Classification Lifecycle Enforcement:**
+
+The classification lifecycle SLAs (30-day Unclassified window, 60-day Provisional window) are enforced through automated monitoring, not manual tracking. An automated daily scan identifies objects approaching or exceeding their classification window. When an object reaches 80% of its allowed window (day 24 for Unclassified, day 48 for Provisional), an automated alert is sent to the responsible steward. When the window is breached, the following escalation sequence applies: (1) the object is flagged in the data catalog with a `classification_overdue` tag visible to all catalog users, (2) an escalation notification is sent to the Data Governance Manager, (3) if unresolved within 14 days of the breach, the object is escalated to the Data Governance Council agenda and the Domain Data Owner is notified. Objects that remain Unclassified beyond 60 days (double the allowed window) are quarantined: access is revoked for all users except the responsible steward and Data Governance Manager, and the object cannot be consumed by downstream pipelines until classification is completed. This enforcement mechanism ensures that classification SLAs have teeth, not just aspirations.
+
 **Multi-Domain Source System Handling:**
 
-When a single Bronze source table feeds multiple Silver domain targets, the pipeline metadata framework captures the lineage: source Bronze table, target Silver table, column-level mapping, target domain, and business rationale for the domain assignment. This lineage is critical for impact analysis. When a Bronze schema changes, every downstream Silver domain consumer must be identifiable. The Technical Data Steward manages this lineage; the Domain Data Stewards on the receiving end are accountable for validating that the domain assignment and transformation logic are correct.
+When a single source system feeds multiple business domains, the split occurs between Silver Base and Silver Enriched. The Base Zone table remains source-system-aligned (e.g. `edp_silver.maximo.base_work_order`), while the Enriched Zone produces separate tables in domain-specific subject area schemas (e.g. `edp_silver.assets.enr_asset_health`, `edp_silver.operations.enr_crew_utilisation`). The pipeline metadata framework captures the lineage: source Bronze table (identified by `source_system`), Silver Base table, target Enriched table, column-level mapping, target domain (`data_domain`), and business rationale for the domain assignment. This lineage is critical for impact analysis. When a source system schema changes, every downstream Base and Enriched consumer must be identifiable through the `source_system` tag and Unity Catalog's automated lineage. The Technical Data Steward manages this lineage; the Domain Data Stewards on the receiving end are accountable for validating that the domain assignment and transformation logic are correct.
 
 **Domain Ownership Dispute Resolution:**
 
@@ -154,15 +192,16 @@ Where domain ownership is contested (a table that could reasonably belong to mul
 
 - Register all data assets in the catalog at the point of creation ("register at birth"). Do not tolerate shadow data assets that exist outside the catalog.
 - Apply sensitivity classification (Layers 1 through 3) at the point of ingestion. This is a Technical Data Steward responsibility. Do not wait for domain ownership decisions before classifying data for sensitivity; security cannot be deferred.
-- Assign domain ownership at the Silver layer, not Bronze. Use the source system identifier as the Bronze-layer `data_domain` holding value. Domain Data Stewards take accountability when data enters their domain at Silver.
+- Use the `source_system` tag (Layer 4) at Bronze to record provenance. Do not assign the `data_domain` tag at Bronze or Silver Base; domain ownership is not meaningful when schemas are source-system-aligned.
+- Assign the `data_domain` tag at the Silver Enriched Zone, where business context is established through integration and enrichment and the Unity Catalog namespace transitions to subject-area-aligned schemas. Domain Data Stewards take full accountability when data enters their subject area at this zone. This is a single, unambiguous rule â not a judgement call that varies by source system.
 - Apply provisional classification automatically at ingestion using rule-based classification (column naming patterns, source system sensitivity mapping, content scanning for personal information).
 - Ensure every data product has a confirmed classification before promotion from Tier 3 to Tier 2.
 - Review classifications periodically (at minimum annually for Tier 1 and Tier 2 products) and whenever a material change occurs.
 - Maintain classification metadata as structured, machine-readable tags in Unity Catalog, not as unstructured text in a wiki or spreadsheet. AI agents and automated policy enforcement depend on structured classification metadata.
-- Use the `edap_` prefixed audit columns to track classification state, classification date, and classifying steward for every governed data asset.
+- Use the `edp_` prefixed audit columns (as defined in the Medallion Architecture document) to track classification state, classification date, and classifying steward for every governed data asset.
 - Enforce single-owner accountability at table level. One domain owns, many domains subscribe. Do not allow shared or ambiguous ownership; it creates accountability gaps.
 
-**Key Roles:** Technical Data Steward (Bronze sensitivity classification, automated classification implementation, catalog registration, multi-domain lineage management), Domain Data Steward (Silver/Gold domain ownership confirmation, business classification review, quality rule definition), Data Governance Manager (classification policy and standards, dispute escalation), Data Engineer (pipeline-level classification propagation and tag application).
+**Key Roles:** Technical Data Steward (Bronze and Silver Base Zone sensitivity classification, automated classification implementation, catalog registration, multi-domain lineage management, quarantine path monitoring), Domain Data Steward (Silver Enriched/Gold domain ownership confirmation, business classification review, quality rule definition, Protected Zone PI classification), Data Governance Manager (classification policy and standards, dispute escalation, classification lifecycle SLA enforcement), Data Engineer (pipeline-level classification propagation and tag application, DQ annotation column implementation).
 
 ---
 
@@ -174,7 +213,7 @@ Policy and standards definition establishes the authoritative rules, principles,
 
 - **Enterprise Data Governance Policy.** The overarching policy that establishes the governance mandate, operating model (federated), roles and accountabilities, and the relationship between governance and regulatory compliance. Approved by executive leadership. Reviewed annually.
 - **Domain-Specific Policies.** Policies that apply within specific data domains, addressing domain-specific business rules, quality thresholds, and handling requirements. Examples: the Asset Data Policy (defining standards for asset hierarchy data, naming conventions, and Maximo/SAP integration rules), the Customer Data Policy (defining personal information handling requirements under the PRIS Act).
-- **Technical Standards.** Detailed, prescriptive standards that define how policies are implemented on the platform. Examples: Unity Catalog naming conventions (catalog-per-environment-layer, e.g. `prod_gold`, `dev_silver`), `edap_` audit column standards, tagging taxonomy for sensitivity and regulatory classification, data contract YAML schema specifications.
+- **Technical Standards.** Detailed, prescriptive standards that define how policies are implemented on the platform. Examples: Unity Catalog naming conventions (catalog-per-layer pattern: `edp_bronze`, `edp_silver`, `edp_gold`, `edp_sandbox`; schema-per-source-or-domain; zone prefixes: `raw_`, `std_`, `base_`, `enr_`, `exp_`, `bi_`), `edp_` audit column standards (`edp_batch`, `edp_hash`, `edp_eff_from`, `edp_eff_to`, `edp_is_current`, `edp_is_deleted`), `dq_` quality annotation columns (`dq_status`, `dq_flags`, `dq_checked_ts`), tagging taxonomy for sensitivity and regulatory classification, data contract YAML schema specifications.
 - **Operational Procedures.** Step-by-step procedures for recurring governance activities: how to request access to a data product, how to raise a data quality issue, how to promote a data product from Tier 3 to Tier 2, how to conduct a classification review.
 
 **Policy as Code:**
@@ -182,10 +221,14 @@ Policy and standards definition establishes the authoritative rules, principles,
 In 2026, the most effective governance programmes encode policies as executable, enforceable rules within the data platform rather than relying solely on written documents. This is the "governance as code" principle:
 
 - **Access control policies** encoded as ABAC rules in Unity Catalog, enforced automatically at query time. Access decisions are based on user attributes (role, domain membership, security clearance) and data attributes (sensitivity classification, domain, regulatory tags), replacing manual approval workflows.
-- **Data quality expectations** encoded as assertions in pipeline code (Lakeflow Declarative Pipelines, dbt tests, Great Expectations), enforced at every pipeline run. Quality is a pipeline gate, not a retrospective audit.
+- **Data quality expectations** encoded as assertions in pipeline code (Lakeflow Spark Declarative Pipelines expectations, dbt tests, Great Expectations), enforced at every pipeline run. Quality is a pipeline gate, not a retrospective audit.
 - **Data contracts** encoded as versioned YAML specifications in source control, validated in CI/CD. Schema changes that violate a downstream contract break the build.
 - **Retention policies** encoded as automated lifecycle rules that archive or delete data when retention periods expire, with audit trails.
-- **Classification propagation rules** encoded as tag inheritance logic. When a Bronze table is classified as OFFICIAL:SENSITIVE and tagged with PRIS Act, those classifications automatically propagate to derived Silver and Gold assets unless explicitly overridden with justification.
+- **Classification propagation rules** encoded as tag inheritance logic. When a Bronze table is classified as OFFICIAL:SENSITIVE and tagged with PRIS Act, those classifications automatically propagate to derived Silver and Gold assets unless explicitly overridden with justification. The governing principle is **"inherit the most restrictive classification from any contributing source."** When a Silver Enriched or Gold table joins data from multiple sources with different sensitivity classifications, the resulting table inherits the highest sensitivity level and the union of all regulatory tags from its contributing sources. A derived table may be *more* restrictive than any individual source (because the combination of datasets may create new sensitivity â e.g. joining anonymised data with a lookup table that enables re-identification). A derived table may never be *less* restrictive than its most sensitive source without explicit justification, Data Governance Manager approval, and an auditable record of the downgrade rationale.
+
+**Governance-as-Code Deployment:**
+
+Governance-as-code artefacts (ABAC policy definitions, Unity Catalog tag configurations, quality assertion code, data contract YAML specifications, classification propagation rules) are deployed through the same CI/CD pipeline as platform code, using **Databricks Asset Bundles (DABs)** as the infrastructure-as-code framework. This ensures that governance changes are version-controlled, peer-reviewed, tested, and deployed through a controlled pipeline â not applied manually through the Unity Catalog UI or ad-hoc scripts. DABs package governance configurations alongside pipeline code, so that a data product's governance controls and its pipeline logic are always deployed together and cannot drift apart. The principle is: if a governance control is not in the DAB, it does not exist in production.
 
 **Guidance:**
 
@@ -199,9 +242,46 @@ In 2026, the most effective governance programmes encode policies as executable,
 
 ---
 
-### 3. Data Quality Management
+### 3. Data Contracts
 
-Data quality is the continuous discipline of ensuring that data is accurate, complete, timely, consistent, and valid, that is, fit for the purposes for which it is consumed. Quality failures erode trust, cause incorrect decisions, break downstream systems, and in a regulated environment, can result in compliance breaches. Quality management is not a stage that occurs once; it is embedded in every stage of the data engineering lifecycle and governed as a core governance discipline within the EDAP.
+Data contracts formalise the agreement between data producers and data consumers. They are the governance mechanism that makes data product commitments explicit, measurable, and enforceable. Without data contracts, governance commitments exist only as implicit expectations â and implicit expectations are the leading cause of broken dashboards, failed pipelines, and eroded trust.
+
+**What a Data Contract Contains:**
+
+A data contract is a versioned, machine-readable specification (typically YAML, stored in source control) that defines the commitments a data product makes to its consumers. A complete data contract includes:
+
+- **Schema specification.** The exact columns, data types, nullability constraints, and valid value ranges that the data product guarantees. Schema changes that violate the contract are blocked in CI/CD before they reach production.
+- **Quality assertions.** The specific quality checks that must pass before the data product is considered ready for consumption (e.g. null rate on `customer_id` must be 0%, row count within Â±10% of previous day, `transaction_date` within the last 90 days).
+- **Freshness SLO.** The maximum acceptable age of the data (e.g. data must be no more than 4 hours old). Monitored continuously with automated alerting on SLO breaches.
+- **Semantic definitions.** Business descriptions for each column, linked to the business glossary where applicable. These descriptions serve both human consumers and AI agents.
+- **Ownership and accountability.** The Domain Data Steward accountable for the data product, the Technical Data Steward responsible for implementation, and the escalation path for issues.
+- **Consumer registry.** The known consumers (downstream pipelines, dashboards, models, applications) that depend on this data product. Enables impact analysis when contract changes are proposed.
+- **Change management protocol.** How changes to the contract are proposed, reviewed, communicated, and implemented. Distinguishes between backwards-compatible changes (additive columns, relaxed constraints) and breaking changes (column removal, type changes, tightened constraints) with different approval processes for each.
+- **Classification and access.** The sensitivity classification, regulatory tags, and access model that apply to the data product, referencing the Layers 1â3 classification.
+
+**Contract Lifecycle:**
+
+Data contracts follow a defined lifecycle: **Draft** (proposed by the data product owner, reviewed by consumers) â **Active** (ratified by all parties, enforced in CI/CD and pipelines) â **Deprecated** (consumers notified, migration period begins) â **Retired** (contract and data product removed after all consumers have migrated). Breaking changes to an active contract trigger a formal change management process that includes consumer impact assessment, migration planning, and a defined transition period.
+
+**Contract Enforcement:**
+
+Contracts are enforced at two points: in the **CI/CD pipeline** (schema and quality specification validation before deployment) and in the **data pipeline** (quality assertion execution at runtime). A data product that fails its contract assertions is quarantined and not published to consumers until the issue is resolved. Contract compliance is tracked as a governance KPI.
+
+**Guidance:**
+
+- Require data contracts for all Tier 1 data products. Strongly recommend them for Tier 2. Tier 3 products are exempt until promotion.
+- Store data contracts in source control alongside pipeline code. Treat contracts as code: versioned, reviewed, and tested.
+- Include both the producer's obligations (schema, quality, freshness) and the consumer's responsibilities (appropriate use, access justification, feedback on quality issues).
+- Automate contract validation in CI/CD. A pipeline that produces a data product without a valid contract should not pass code review.
+- Review active contracts quarterly to ensure they remain accurate and that SLOs are being met.
+
+**Key Roles:** Domain Data Steward (contract definition, consumer negotiation, change approval), Technical Data Steward (contract implementation, CI/CD enforcement, SLO monitoring), Data Engineer (contract validation in pipeline code), Data Governance Manager (contract standards, compliance reporting).
+
+---
+
+### 4. Data Quality Management
+
+Data quality is the continuous discipline of ensuring that data is accurate, complete, timely, consistent, and valid â that is, fit for the purposes for which it is consumed. Quality failures erode trust, cause incorrect decisions, break downstream systems, and in a regulated environment, can result in compliance breaches. Quality management is not a stage that occurs once; it is embedded in every stage of the data engineering lifecycle and governed as a core governance discipline within the EDAP.
 
 **Quality Dimensions:**
 
@@ -214,22 +294,31 @@ Data quality is the continuous discipline of ensuring that data is accurate, com
 
 **Quality Enforcement Points:**
 
-Quality is enforced at multiple points in the data lifecycle, aligned to the EDAP's medallion architecture:
+Quality is enforced at zone boundaries throughout the pipeline, aligned to the EDAP's medallion architecture and the **"Propagate, Don't Drop"** principle established in the Medallion Architecture document. This principle distinguishes between two fundamentally different categories of quality issue:
 
-- **At Ingestion (Bronze).** Schema validation, null checks on mandatory fields, data type enforcement, duplicate detection, freshness monitoring. These are the first line of defence, preventing bad data from entering the platform.
-- **After Transformation (Silver).** Business rule validation, cross-field consistency checks, referential integrity across conformed dimensions, statistical anomaly detection (row counts, value distributions, null rates compared to historical baselines).
-- **Before Serving (Gold).** SLA compliance checks (freshness, completeness), metric reconciliation (do the numbers add up?), data product contract validation. This is the final quality gate before data reaches consumers.
+- **Structural / technical failures** (unparseable records, binary corruption, missing mandatory system fields) are routed to the **quarantine path** alongside the Processed Zone table. These records cannot be processed and must be quarantined to prevent pipeline failure.
+- **Business data quality issues** (invalid codes, unexpected nulls, referential integrity violations, out-of-range values) **must propagate** through all zones. Dropping them silently creates invisible data loss, broken referential integrity, and false trust. The correct handling is to carry the record forward with quality annotations (`dq_status`, `dq_flags`, `dq_checked_ts` columns) so that all data is represented where expected and business users can see and act on quality problems.
+
+Quality enforcement is applied at each zone boundary:
+
+- **Processed Zone (Bronze).** Structural schema validation â correct data types, required fields present. Records that cannot be parsed or fail structural validation are routed to the quarantine path. This is the only zone where records are removed from the pipeline, and only for structural failures.
+- **Base Zone (Silver).** Business rule validation â null checks, invalid code detection, referential integrity, cross-field consistency. All records propagate regardless of business DQ status; quality issues are annotated in `dq_status` / `dq_flags` columns, not filtered. DQ annotation columns are introduced at this zone and carried forward through all downstream zones.
+- **Enriched Zone (Silver).** Join completeness, calculation validity, enrichment-specific quality dimensions. Unresolvable joins and incomplete enrichments are flagged in the DQ columns. Records continue to propagate.
+- **Gold Zones (Exploratory / BI).** Product-specific quality gates. Where a specific data product has a documented requirement to exclude records that fail defined quality rules (e.g. a BI table excludes assets with no location assigned), this exclusion is an explicit, documented business decision applied at this zone only â not a general pipeline behaviour. SLA compliance checks (freshness, completeness), metric reconciliation, and data contract validation are enforced here as the final quality gate before data reaches consumers.
+
+**Three Complementary DQ Observability Layers:**
+
+The EDAP provides DQ observability at three granularities, all of which are needed â they are complementary, not alternatives:
+
+- **Row-level.** Physical `dq_status`, `dq_flags`, and `dq_checked_ts` columns in the table, telling you which specific rules each record violated.
+- **Pipeline/batch level.** Lakeflow SDP `expect` expectations via `system.pipelines.event_log`, telling you how many records failed each rule in each batch.
+- **Table/trend level.** Data Profiling (Databricks native), providing column statistics over time â null rates, distributions, drift, freshness anomalies.
+
+Lakeflow SDP `expect` does not add columns to the target table; it only records aggregate pass/fail counts in the pipeline event log. Physical DQ annotation columns are therefore required for row-level visibility and are computed as part of the transformation logic, not by `expect`.
 
 **Data Quality Assertions and Data Contracts:**
 
-Quality expectations are encoded as assertions within pipeline code, not as separate, retrospective processes. Every data product's data contract includes a quality section that specifies the assertions that must pass before the product is considered "ready" for consumption. A data contract's quality specification might include:
-
-- Null rate on `customer_id` must be 0%.
-- Row count must be within Â±10% of the previous day's count.
-- `transaction_date` must be within the last 90 days.
-- Freshness: data must be no more than 4 hours old.
-
-These assertions are enforced in the pipeline. If an assertion fails, the pipeline quarantines the affected data (rather than publishing bad data) and raises an alert to the responsible steward.
+Quality expectations are encoded as assertions within pipeline code, not as separate, retrospective processes. Every data product's data contract includes a quality section that specifies the assertions that must pass before the product is considered "ready" for consumption. These assertions are enforced in the pipeline. If a business quality assertion fails, the pipeline annotates the affected records with DQ flags (consistent with the "Propagate, Don't Drop" principle) and raises an alert to the responsible steward. If the failure exceeds a defined severity threshold specified in the data contract (e.g. more than 5% of records failing a critical assertion), the pipeline flags the data product as **degraded** in the catalog and withholds the refresh from consumers until the steward triages the issue. The data product's quality score is updated to reflect the degradation. Structural failures that prevent processing are handled separately via the quarantine path as defined in the Medallion Architecture document.
 
 **Data Observability:**
 
@@ -253,18 +342,22 @@ Each governed data product maintains a composite quality score derived from its 
 **Guidance:**
 
 - Embed quality assertions in pipelines, not in separate audit processes. Quality is a pipeline gate.
+- Enforce the **"Propagate, Don't Drop"** principle: business DQ failures are annotated, not filtered. Only structural failures that prevent processing are quarantined. Silent data loss is a governance failure.
+- Implement physical DQ annotation columns (`dq_status`, `dq_flags`, `dq_checked_ts`) at the Silver Base Zone and carry them forward through all downstream zones. Do not rely solely on Lakeflow SDP `expect` for row-level DQ visibility â `expect` records aggregate counts in the event log but does not annotate individual rows.
 - Define quality thresholds in data contracts. Make quality expectations explicit, measurable, and enforceable.
+- Where a Gold data product excludes records based on quality rules, the exclusion must be an explicit, documented business decision â not an implicit pipeline behaviour.
 - Push quality accountability as far upstream as possible. Engage source system owners in quality improvement.
-- Use data observability to detect anomalies that rule-based assertions would miss.
+- Use data observability (Data Profiling) to detect anomalies that rule-based assertions would miss â distribution drift, null rate changes, volume shifts, freshness degradation.
 - Maintain quality scores for all Tier 1 and Tier 2 data products. Publish scores in the catalog.
 - Conduct periodic quality reviews with Domain Data Stewards to identify systemic issues and improvement opportunities.
+- Monitor quarantine path file growth actively; sustained growth indicates a systemic source system issue requiring investigation and remediation.
 - Quarantine bad data rather than publishing it. A delayed data product is better than a wrong one.
 
 **Key Roles:** Domain Data Steward (quality rule definition, business rule validation, remediation oversight), Technical Data Steward (quality assertion implementation, observability configuration, automated monitoring), Data Engineer (pipeline-level quality enforcement), Data Governance Manager (quality policy, reporting, and escalation).
 
 ---
 
-### 4. Metadata Management and Cataloguing
+### 5. Metadata Management and Cataloguing
 
 Metadata is the governance system's nervous system. It carries the information that makes data discoverable, understandable, trustworthy, and governable. Without rich, accurate, maintained metadata, governance is blind. In 2026, metadata must serve both human consumers (who need business context and documentation) and machine consumers (AI agents, automated policy enforcement, and programmatic discovery). This means metadata must be structured, machine-readable, and semantically rich, not just free-text descriptions in a wiki.
 
@@ -280,14 +373,34 @@ Metadata is the governance system's nervous system. It carries the information t
 
 The EDAP catalog architecture uses a two-system model:
 
-- **Unity Catalog** serves as the authoritative governance hub for all assets within the Databricks lakehouse. Manages schemas, tables, volumes, models, functions, and connections. Enforces ABAC access control, hosts classification tags, manages data lineage within the platform, and serves as the runtime policy enforcement point. Unity Catalog is the "source of truth" for technical and governance metadata within the lakehouse.
+- **Unity Catalog** serves as the authoritative governance hub for all assets within the Databricks lakehouse. Manages schemas, tables, volumes, models, functions, and connections through a three-level namespace (`<catalog>.<schema>.<table>`) that encodes layer membership in the catalog name and zone membership in the table prefix. Enforces ABAC access control, hosts classification tags, manages data lineage within the platform (including automatic column-level lineage), and serves as the runtime policy enforcement point. Unity Catalog Volumes extend governance to unstructured file storage (Landing Zone files, raw extracts). Unity Catalog is the "source of truth" for technical and governance metadata within the lakehouse.
 - **Alation** serves as the enterprise discovery and collaboration layer. Provides cross-system lineage (spanning source systems, the lakehouse, BI tools, and downstream consumers), the business glossary, curation workflows, and a discovery interface for business users. Alation integrates with Unity Catalog, harvesting its metadata and enriching it with business context that Unity Catalog does not natively manage.
 
 The principle is clear: **Unity Catalog governs; Alation discovers.** Technical governance decisions (access control, classification enforcement, lineage within the platform) are Unity Catalog's responsibility. Business discovery, cross-system visibility, and glossary management are Alation's responsibility. There should be no ambiguity about which system is authoritative for which metadata type.
 
+**Governing Unstructured Data in Unity Catalog Volumes:**
+
+Unity Catalog Volumes extend governance to unstructured and semi-structured data — documents, images, PDFs, audio files, raw extracts, and other non-tabular assets stored in cloud object storage. As organisations increasingly use unstructured data for RAG knowledge bases, document intelligence, and AI training, governing these assets is no longer optional. Key governance requirements for Volumes:
+
+- **Classification.** Unstructured data must be classified for sensitivity using the same four-layer tagging model applied to tabular data. A PDF containing customer correspondence carries the same PRIS Act obligations as a customer database table.
+- **Access control.** Volume-level and path-level access controls in Unity Catalog restrict who can read, write, and manage unstructured files. Apply the same "open by default, restricted by exception" principle, but recognise that unstructured data is harder to inspect automatically for sensitivity — err toward provisional restriction until classification is confirmed.
+- **Lineage tracking.** When unstructured data feeds downstream processes (RAG pipelines, document extraction, image classification), lineage must trace from the model output back to the specific Volume and files that contributed. This is essential for auditability and for debugging incorrect AI outputs.
+- **Quality standards.** Define quality expectations for unstructured data: document currency (when was the document last reviewed?), format consistency, completeness, and fitness for the intended AI or analytical use case. Stale or incorrect documents in a RAG knowledge base are the unstructured equivalent of dirty data in a fact table.
+
 **Business Glossary:**
 
 The business glossary is the authoritative definition of business terms, metrics, and concepts used across the enterprise. It resolves the perennial problem of conflicting definitions ("what do we mean by 'active customer'?") by establishing a single, governed definition for each term. Glossary terms are linked to the data assets that implement them, creating a traceable chain from business concept to physical data.
+
+**Business Glossary Lifecycle:**
+
+The business glossary is itself a governed asset with a defined lifecycle for term management:
+
+- **Proposed.** A Domain Data Steward proposes a new term or a revision to an existing term, providing the definition, domain scope, related terms, and the data assets that implement the term. For domain-specific terms (e.g. "asset criticality rating"), the proposing Domain Data Steward's domain owns the definition. For cross-domain terms (e.g. "active customer," "revenue"), the proposal is flagged for cross-domain review.
+- **Reviewed.** Domain-specific terms are reviewed and approved by the relevant Domain Data Owner. Cross-domain terms are reviewed by all affected Domain Data Stewards and ratified by the Data Governance Council. Conflicting definitions are resolved through the Council's dispute resolution process; the Council's decision is binding and recorded.
+- **Published.** The approved definition is published in Alation, linked to implementing data assets in Unity Catalog, and communicated to affected stakeholders. The definition becomes the authoritative reference for all data products and reports that use the term.
+- **Deprecated / Retired.** When a term is superseded or no longer relevant, it is marked as deprecated with a pointer to the replacement term. After a transition period, deprecated terms are retired. Retired terms remain in the glossary history for audit purposes but are no longer linked to active data assets.
+
+Glossary terms are versioned: when a definition changes, the previous version is retained for traceability. Glossary health (percentage of Tier 1 and Tier 2 data products with linked glossary terms, number of undefined or conflicting terms) is tracked as a governance KPI.
 
 **Active Metadata:**
 
@@ -311,7 +424,7 @@ The trend toward active metadata (metadata that drives automation rather than si
 
 ---
 
-### 5. Access Control and Security Governance
+### 6. Access Control and Security Governance
 
 Access control governance determines who can access what data, under what conditions, and with what audit trail. It operationalises the classification decisions made in Stage 1 and the policies defined in Stage 2 into enforceable, auditable access controls within the EDAP. Security governance ensures that data is protected throughout its lifecycle: at rest, in transit, and in use.
 
@@ -319,17 +432,27 @@ Access control governance determines who can access what data, under what condit
 
 Data should be accessible to any authenticated, authorised user unless a specific, documented restriction applies. This inverts the traditional model where data is locked down by default and access requires navigating approval chains. The rationale is pragmatic: most enterprise data is not sensitive, and restricting access to non-sensitive data creates friction that slows decision-making without improving security. The governance effort is focused on precisely identifying and tightly controlling the data that genuinely requires restriction (personal information, security-critical data, commercially sensitive data) rather than applying blanket restrictions that impede legitimate use.
 
+**Important caveat:** The "open by default" principle applies only to data that has completed the classification lifecycle (status: Classified). Data in Unclassified or Provisional status is restricted by default until classification is confirmed, as described in the Classification Lifecycle section.
+
 **Attribute-Based Access Control (ABAC):**
 
 The EDAP access control model is ABAC-centric, enforced through Unity Catalog. Access decisions are made dynamically based on the intersection of user attributes (role, domain membership, security clearance, project assignment) and data attributes (sensitivity classification, regulatory tags, domain classification). This is more granular and adaptive than traditional role-based access control (RBAC) alone, though RBAC groups serve as one input into ABAC policy evaluation.
 
 **Access Control Enforcement Layers:**
 
-- **Catalog-Level.** Controls which catalogs (environments/layers) a user can see and access. Enforced by Unity Catalog catalog-level grants.
-- **Schema-Level.** Controls access to schemas within a catalog. Domain-aligned schemas are accessible to domain members by default; cross-domain access is governed by data sharing agreements.
+- **Catalog-Level.** Controls which catalogs (layers) a user can see and access. Enforced by Unity Catalog catalog-level grants. The EDAP's catalog-per-layer pattern (`edp_bronze`, `edp_silver`, `edp_gold`, `edp_sandbox`) provides layer-level isolation as the first access boundary.
+- **Schema-Level.** Controls access to schemas within a catalog. In Bronze and Silver Base, schemas are source-system-aligned; in Silver Enriched and Gold, schemas are domain/subject-area-aligned. Domain-aligned schemas are accessible to domain members by default; cross-domain access is governed by data sharing agreements.
 - **Table-Level.** Controls access to individual tables and views. The primary enforcement point for most access policies.
-- **Column-Level.** Masks or redacts sensitive columns (e.g. PII fields) for users who have table-level access but are not authorised for the specific sensitive attributes. Implemented via Unity Catalog column masks and dynamic views.
+- **Column-Level.** Masks or redacts sensitive columns (e.g. PI fields) for users who have table-level access but are not authorised for the specific sensitive attributes. Implemented via Unity Catalog column masks and dynamic views.
 - **Row-Level.** Filters rows based on user attributes (e.g. a regional manager sees only their region's data). Implemented via Unity Catalog row-level security or parameterised views.
+
+**Protected Zone (Silver):**
+
+The Silver Protected Zone provides an additional physical isolation layer for Personal Information (PI) and other data classified as OFFICIAL:SENSITIVE or higher. Access is controlled via **Privileged Access Management (PAM)**: access is granted only when necessary and revoked automatically after task completion. Access to specific subject areas within the Protected Zone is controlled by role (e.g. only users with the `customer_pi_reader` role can access customer PI). The Protected Zone may produce synthetic identifiers or masked derivatives used in other zones in place of original PI, reducing the governance surface area for sensitive data. Unity Catalog column masking and row-level security should be evaluated as complementary mechanisms to reduce data duplication while maintaining access control.
+
+**Per-Layer Compute Isolation:**
+
+For enterprise and regulated environments, the EDAP deploys separate Lakeflow Jobs per layer, each running under a dedicated service principal with least-privilege access: Bronze service principals can read from source and write to Bronze only; Silver service principals can read from Bronze and write to Silver only; Gold service principals can read from Silver and write to Gold only. This ensures that a compromise in one layer cannot propagate to others and creates clear separation of duties for audit purposes.
 
 **Access Request and Provisioning:**
 
@@ -360,7 +483,7 @@ All data access is logged in Unity Catalog's audit trail. Access patterns are mo
 
 ---
 
-### 6. Data Lifecycle Management
+### 7. Data Lifecycle Management
 
 Data lifecycle management governs the progression of data from creation through active use, archival, and eventual deletion or permanent retention. It ensures that data is retained for as long as it has business value or regulatory obligation, and no longer. Retaining data beyond its useful life increases storage costs, expands the attack surface, and creates compliance risk (particularly under the PRIS Act's data minimisation principles). Deleting data prematurely destroys business value and may violate records retention obligations.
 
@@ -379,6 +502,10 @@ Retention policies define how long data must be retained, in what state, and whe
 - **Pending Deletion.** Data has passed its retention period and is scheduled for deletion. A grace period allows for objection or reclassification before permanent removal.
 - **Deleted.** Data has been permanently and verifiably removed from all storage locations, including backups, snapshots, and associated metadata, in compliance with regulatory requirements. Deletion is logged and auditable.
 
+**Zone-Specific Retention Considerations:**
+
+Retention policies interact with the medallion zone structure. The Bronze Raw Zone is immutable and append-only by design, serving as the system of record for all ingested data; its retention periods are typically the longest, driven by SOCI Act and State Records Act requirements. The Bronze Landing Zone is transient and cleared after successful ingestion. Silver and Gold zones have retention periods driven by business value and regulatory requirements specific to each data product. Delta Lake's time travel capability provides short-term replay without separate archival infrastructure, but time travel retention windows (controlled by `VACUUM`) must be aligned with governance retention policies. For PRIS Act compliance, deletion must be propagated through all zones using Delta Lake deletion vectors and Change Data Feed (CDF), and must be verifiable â covering not just the primary table but also derived data, cached copies, and metadata that could re-identify individuals.
+
 **Compliance-Driven Deletion:**
 
 Under the PRIS Act 2024, personal information must be deleted when the purpose for which it was collected has been fulfilled and no other retention obligation applies. This requires the governance programme to maintain a clear mapping between personal information holdings, the purposes for which they are held, and the applicable retention periods. Deletion must be verifiable: not just the data files but also derived data, cached copies, and metadata that could re-identify individuals.
@@ -396,17 +523,17 @@ Under the PRIS Act 2024, personal information must be deleted when the purpose f
 
 ---
 
-### 7. Compliance and Regulatory Governance
+### 8. Compliance and Regulatory Governance
 
 Compliance governance ensures that the organisation's data management practices meet all applicable legal, regulatory, and policy obligations. It is not a separate governance function but a cross-cutting concern embedded in every other stage: classification, policy, quality, access control, retention, and metadata all have compliance dimensions. This stage consolidates the compliance perspective and provides the framework for demonstrating compliance to regulators, auditors, and executive leadership.
 
 **Regulatory Landscape:**
 
-- **SOCI Act 2018 (Security of Critical Infrastructure).** Defines obligations for critical infrastructure entities, including risk management programmes, reporting obligations for cyber incidents, and government-directed actions. Directly relevant as a water utility classified as a critical infrastructure asset. Governance must ensure that data systems supporting critical infrastructure operations meet SOCI requirements.
-- **PRIS Act 2024 (Privacy and Responsible Information Sharing).** Replaces the Freedom of Information Act 1992 as the primary WA privacy legislation. Establishes Information Privacy Principles (IPPs) governing the collection, use, disclosure, storage, and disposal of personal information (PI; note: "personal information" per the PRIS Act, not "PII" which is a different legislative term). Governance must ensure PI is identified, classified, handled in accordance with IPPs, and deleted when no longer required.
+- **SOCI Act 2018 (Security of Critical Infrastructure).** Defines obligations for critical infrastructure entities, including risk management programmes, reporting obligations for cyber incidents, and government-directed actions. Directly relevant as a water utility classified as a critical infrastructure asset. Governance must ensure that data systems supporting critical infrastructure operations meet SOCI requirements. The EDAP's immutable Bronze Raw Zone serves as an audit-compliant data retention mechanism; Unity Catalog audit logging provides the forensic trail; and the Silver Protected Zone isolates sensitive operational data.
+- **PRIS Act 2024 (Privacy and Responsible Information Sharing).** Replaces the Freedom of Information Act 1992 as the primary WA privacy legislation. Establishes Information Privacy Principles (IPPs) governing the collection, use, disclosure, storage, and disposal of personal information (PI; note: "personal information" per the PRIS Act, not "PII" which is a different legislative term). Governance must ensure PI is identified, classified, handled in accordance with IPPs, and deleted when no longer required. The Silver Protected Zone with PAM-based access, Unity Catalog column masking for PI fields, and Delta Lake deletion vectors with CDF propagation for right-to-be-forgotten operations are the primary architecture controls.
 - **WA Information Classification Policy (WAICP).** Mandates classification of government information according to sensitivity levels. Directly drives the sensitivity layer of the four-layer classification model.
-- **State Records Act 2000.** Establishes obligations for the creation, management, and disposal of government records. Data that constitutes a "record" under the Act must be managed in accordance with approved retention and disposal schedules. Governance must ensure that data lifecycle management aligns with records management obligations.
-- **Essential Eight.** The Australian Signals Directorate's cybersecurity mitigation strategies. Governance must ensure that data platform security controls (access control, patching, multi-factor authentication, backups, application control) meet the organisation's target maturity level.
+- **State Records Act 2000.** Establishes obligations for the creation, management, and disposal of government records. Data that constitutes a "record" under the Act must be managed in accordance with approved retention and disposal schedules. Governance must ensure that data lifecycle management aligns with records management obligations. The append-only Bronze Raw and Processed zones provide immutable records; configurable retention periods per zone ensure compliance with disposal schedules.
+- **Essential Eight.** The Australian Signals Directorate's cybersecurity mitigation strategies. Governance must ensure that data platform security controls (access control, patching, multi-factor authentication, backups, application control) meet the organisation's target maturity level. The EDAP's per-layer service principal isolation, Unity Catalog RBAC/ABAC, and Databricks Asset Bundles for controlled deployments support Essential Eight compliance.
 
 **Compliance Evidence and Traceability:**
 
@@ -435,7 +562,77 @@ For new data initiatives, systems, or data products that involve personal inform
 
 ---
 
-### 8. Continuous Improvement and Governance Operations
+### 9. AI and Model Governance
+
+As AI systems move from experimental pilots to production workloads, governance must extend beyond traditional data assets to encompass models, agents, and the data assets that feed them. AI governance is not a separate discipline — it is an extension of the existing governance framework to a new class of assets with distinct risk profiles.
+
+**AI Model Inventory and Registration:**
+
+All production AI and ML models must be registered in **Unity Catalog Model Registry**. Registration is not optional; an unregistered model is an ungoverned model. The model registry provides versioning, lineage (tracing from model back to training data, features, and code), stage management (Staging → Production → Archived), and access control. The model inventory enables the organisation to answer a fundamental governance question: "What AI models do we have in production, what do they do, who owns them, and what data did they learn from?"
+
+**AI Risk Classification:**
+
+AI systems must be classified by risk level, aligned to emerging regulatory frameworks:
+
+- **Minimal risk.** Internal productivity tools, low-stakes recommendations, exploratory analytics. Standard governance controls apply.
+- **Limited risk.** Systems that interact with users or influence operational decisions where errors have moderate impact. Require transparency obligations (users must know they are interacting with AI), basic documentation, and regular performance monitoring.
+- **High risk.** Systems that affect individuals' rights, safety, or access to services; systems supporting critical infrastructure operations; systems making or materially influencing consequential decisions (hiring, service prioritisation, compliance determinations). Require comprehensive documentation (model cards, datasheets), mandatory human oversight, fairness and bias assessments, explainability provisions, and formal governance review before deployment.
+- **Unacceptable risk.** Systems that contravene ethical principles or regulatory prohibitions. Not permitted.
+
+This classification aligns with the direction of both the EU AI Act and emerging Australian AI governance frameworks. Classification should be performed during the Discover stage of the Data Science Lifecycle and recorded as governance metadata in Unity Catalog.
+
+**Mandatory Documentation:**
+
+For all high-risk AI systems and strongly recommended for limited-risk systems:
+
+- **Model cards** documenting the model's purpose, training data, performance characteristics, limitations, known biases, intended use, and out-of-scope uses.
+- **Datasheets** for the datasets used in training, documenting provenance, representativeness, known quality issues, and any pre-processing applied.
+
+Documentation must be maintained alongside the model in Unity Catalog and updated when the model is retrained or its use case evolves.
+
+**Human Oversight Requirements:**
+
+High-risk AI systems must incorporate human oversight mechanisms proportionate to their risk:
+
+- Human-in-the-loop (human approves every decision) for the highest-risk applications.
+- Human-on-the-loop (human monitors outputs and can intervene) for systems with moderate autonomy.
+- Human-in-command (human can override or shut down the system) as a minimum for all production AI.
+
+The oversight model must be documented, the responsible humans identified by role, and escalation paths defined.
+
+**AI Agent Governance:**
+
+Agentic AI systems — systems that can reason, plan, and take autonomous actions (executing SQL, calling APIs, triggering workflows) — require additional governance controls:
+
+- **Action boundary definitions.** Explicit, documented boundaries on what actions an agent can take, enforced by the Mosaic AI Agent Framework. An agent authorised to query data should not be able to modify or delete it unless explicitly permitted.
+- **Permission scoping.** Agent service principals must follow the principle of least privilege, with Unity Catalog access controls restricting the agent to only the data and functions it needs.
+- **Escalation and kill switches.** All production agents must have defined escalation paths (when does the agent hand off to a human?) and kill switches (how is the agent stopped immediately if it behaves unexpectedly?).
+- **Audit trails.** All agent actions, tool invocations, and decisions must be logged for governance review.
+
+**RAG and Knowledge Base Governance:**
+
+Document corpora and knowledge bases feeding Retrieval-Augmented Generation (RAG) systems are governed data assets:
+
+- Knowledge base documents must be registered in Unity Catalog (as Volumes or managed assets), classified for sensitivity, and subject to access control.
+- Document currency must be maintained — stale or outdated documents in a RAG knowledge base produce incorrect answers. Establish freshness SLOs for knowledge base content.
+- Lineage must trace from a RAG system's output back to the specific documents retrieved, enabling answer verification and governance audit.
+- Where knowledge bases contain information from multiple sensitivity classifications, the RAG system must enforce the most restrictive access control — a user who is not authorised to see OFFICIAL:SENSITIVE source documents must not receive answers derived from those documents.
+
+**Guidance:**
+
+- Register all production models in Unity Catalog Model Registry. No exceptions.
+- Classify AI systems by risk level at the Discover stage and apply proportionate governance controls.
+- Require model cards and datasheets for all high-risk AI systems.
+- Define and document human oversight mechanisms before deploying high-risk AI.
+- Govern AI agents with explicit action boundaries, least-privilege permissions, and comprehensive audit trails.
+- Treat RAG knowledge bases as governed data products with sensitivity classification, freshness SLOs, and lineage.
+- Review AI governance controls at least annually, or when regulatory frameworks (EU AI Act, Australian AI Ethics Principles) are updated.
+
+**Key Roles:** Data Governance Manager (AI governance policy, risk classification framework), Domain Data Steward (model documentation review, knowledge base governance), Technical Data Steward (Model Registry configuration, agent permission scoping, audit trail implementation), Data Scientist / ML Engineer (model card authoring, risk assessment input), Legal / Compliance (regulatory alignment, AI risk classification review).
+
+---
+
+### 10. Continuous Improvement and Governance Operations
 
 Governance is not a set-and-forget programme. The regulatory landscape evolves, the data platform evolves, business requirements evolve, and the organisation's data maturity evolves. The continuous improvement stage ensures that governance practices, policies, and controls are regularly assessed, measured, and improved.
 
@@ -449,6 +646,7 @@ What gets measured gets managed. The governance programme tracks metrics across 
 - **Access Control Compliance.** Percentage of data assets with confirmed classification and enforced ABAC policies. Time to provision access for new requests.
 - **Metadata Completeness.** Percentage of data products with complete business metadata (description, ownership, glossary linkage, quality score).
 - **Data Contract Coverage.** Percentage of Tier 1 and Tier 2 data products with active, enforced data contracts.
+- **Classification Lifecycle Compliance.** Percentage of data assets completing the Unclassified â Provisional â Classified lifecycle within the defined SLA windows (30 and 60 days respectively). Number of objects currently in breach.
 - **Issue Resolution.** Mean time to detect and resolve data quality issues. Number of open quality issues by domain and severity.
 - **Stewardship Activity.** Classification reviews completed, metadata reviews conducted, quality issues triaged and resolved. Measures active engagement of the stewardship community.
 
@@ -513,7 +711,8 @@ The Domain Data Steward is the **business-facing** governance role responsible f
 - **Quality Rule Definition.** Defining the business rules that determine data quality for their domain. What does "accurate" mean for asset location data? What does "complete" mean for a customer record? These are business judgements that only domain experts can make.
 - **Quality Issue Triage and Escalation.** Reviewing quality issues detected by automated assertions, assessing business impact, prioritising remediation, and escalating systemic issues to the Domain Data Owner or Data Governance Council.
 - **Access Approval.** Approving access requests for sensitive data within their domain. Reviewing access patterns to ensure data is being used appropriately and within the purpose for which access was granted.
-- **Data Product Governance.** Ensuring data products within their domain meet FAUQD criteria for their governance tier. Participating in data product promotion decisions (Tier 3 â Tier 2 â Tier 1).
+- **Data Product Governance.** Ensuring data products within their domain meet the Five Gates criteria for their governance tier. Participating in data product promotion decisions (Tier 3 â Tier 2 â Tier 1).
+- **Data Contract Ownership.** Defining and maintaining data contracts for data products within their domain. Negotiating contract terms with consumers. Approving contract changes.
 - **Business Stakeholder Liaison.** Acting as the bridge between governance processes and business users within their domain. Translating governance requirements into business-understandable terms and channelling business feedback into governance improvement.
 - **Cross-Domain Collaboration.** Working with stewards in other domains to resolve cross-domain data issues (e.g. conflicting definitions, shared data products, multi-domain source systems).
 
@@ -530,12 +729,13 @@ The Technical Data Steward is the **platform-facing** governance role responsibl
 **Accountabilities:**
 
 - **Catalog and Metadata Implementation.** Configuring Unity Catalog schemas, tags, and metadata. Implementing automated metadata harvesting. Ensuring that the catalog accurately reflects the current state of data assets. Managing the technical integration between Unity Catalog and Alation.
-- **Classification Tag Management.** Implementing and maintaining the tagging taxonomy in Unity Catalog. Configuring tag propagation rules (how classifications flow from source to derived assets). Ensuring that classification tags assigned by Domain Data Stewards are correctly applied in the platform.
-- **Access Control Implementation.** Translating access policies into ABAC rules in Unity Catalog. Configuring column masks, row-level security filters, and dynamic views. Managing access grants and revocations. Auditing access patterns using Unity Catalog audit logs.
-- **Data Quality Assertion Implementation.** Implementing the quality rules defined by Domain Data Stewards as automated assertions in pipeline code (Lakeflow Declarative Pipelines expectations, dbt tests, Great Expectations suites). Configuring data observability monitoring. Managing quality score computation and publication.
+- **Classification Tag Management.** Implementing and maintaining the tagging taxonomy in Unity Catalog, including the separation of `source_system` (provenance, applied at Bronze) and `data_domain` (ownership, applied at Silver Enriched/Gold) tags. Configuring tag propagation rules (how classifications flow from source to derived assets across zone boundaries). Ensuring that classification tags assigned by Domain Data Stewards are correctly applied in the platform.
+- **Access Control Implementation.** Translating access policies into ABAC rules in Unity Catalog. Configuring column masks, row-level security filters, and dynamic views. Managing the Silver Protected Zone PAM configuration. Managing per-layer service principal isolation. Managing access grants and revocations. Auditing access patterns using Unity Catalog audit logs.
+- **Data Quality Assertion Implementation.** Implementing the quality rules defined by Domain Data Stewards as automated assertions in pipeline code (Lakeflow SDP expectations, dbt tests, Great Expectations suites). Ensuring DQ annotation columns (`dq_status`, `dq_flags`, `dq_checked_ts`) are correctly computed and carried forward from Silver Base through all downstream zones. Configuring data observability monitoring (Data Profiling). Managing quality score computation and publication. Monitoring quarantine path growth.
 - **Data Contract Enforcement.** Implementing data contract specifications as enforceable checks in CI/CD pipelines. Ensuring that schema changes, quality specification changes, and SLA changes are validated against downstream contracts before deployment.
 - **Lineage Validation.** Ensuring that data lineage is accurately captured and traceable from source to consumption. Investigating and resolving lineage gaps or inaccuracies.
 - **Retention and Lifecycle Automation.** Implementing automated retention policies, archive transitions, and deletion workflows. Ensuring verifiable deletion for compliance purposes.
+- **Classification Lifecycle Monitoring.** Implementing and maintaining the automated scans that enforce classification lifecycle SLAs (30-day Unclassified window, 60-day Provisional window). Configuring alerts and escalation notifications.
 - **Governance Tooling and Automation.** Building and maintaining the automation that makes governance scalable: automated classification propagation, quality score dashboards, stewardship workflow tools, and governance metric collection.
 
 **Reports to:** Data Platform Manager or Data Governance Manager (depending on organisational structure). Collaborates closely with Domain Data Stewards (implementing their governance decisions) and Data Engineers (embedding governance in pipelines).
@@ -571,6 +771,7 @@ The Data Governance Manager is the programme manager for data governance. They o
 - Compliance programme management (regulatory mapping, audit coordination, PIA oversight).
 - Data Governance Council facilitation and secretariat.
 - Cross-domain issue resolution and escalation.
+- Classification lifecycle SLA enforcement and escalation management.
 
 **Data Custodian**
 
@@ -604,9 +805,12 @@ The organisations that extract the most value from their data are those that tre
 
 - **Federated governance as a deliberate architecture.** Not the absence of centralisation, but the distribution of governance responsibility to the people closest to the data, within a consistent central framework. Domain ownership with enterprise guardrails.
 - **Governance as code.** Policies encoded as automated, platform-enforced rules (ABAC, data contracts, quality assertions, classification propagation) rather than documents that rely on human compliance. If it is not enforced by the platform, it is a suggestion, not governance.
-- **Open by default, restricted by exception.** Data accessible to all authenticated users unless a specific, documented restriction applies. Focus governance energy on precisely controlling the data that genuinely requires restriction.
+- **Open by default, restricted by exception.** Data accessible to all authenticated users unless a specific, documented restriction applies. Focus governance energy on precisely controlling the data that genuinely requires restriction. But recognise that this principle presupposes completed classification; unclassified data is restricted by default.
 - **Machine-readable governance.** Every governance signal (classification, quality score, ownership, lineage, freshness) available as structured, machine-readable metadata that AI agents and automated systems can consume. Governance that exists only in human-readable form is invisible to half your future consumers.
+- **Provenance and ownership as distinct concepts.** Source system identity (`source_system`) and business domain accountability (`data_domain`) are fundamentally different attributes, expressed as separate tags, applied at different zones of the medallion architecture, by different roles, for different purposes. The Unity Catalog namespace itself reinforces this: source-system-aligned schemas at Bronze and Silver Base progressively give way to subject-area schemas at Silver Enriched and domain schemas at Gold. Semantic clarity in tagging is the foundation of machine-readable governance.
+- **Propagate, don't drop.** Business data quality issues are annotated, not filtered. Only structural failures that prevent processing are quarantined. Silent data loss is a governance failure. Quality visibility through physical DQ annotation columns (`dq_status`, `dq_flags`, `dq_checked_ts`) ensures that all data is represented where expected, and business users can see and act on quality problems. Exclusion of records from a specific data product is an explicit, documented business decision â not a general pipeline behaviour.
 - **Proportional governance tiers.** Apply governance rigour proportional to data product importance. Over-governing exploratory data stifles innovation; under-governing enterprise data creates risk. The tier model ensures both.
+- **Data contracts as the producer-consumer interface.** Formalised, versioned, enforceable agreements that make data product commitments explicit and measurable. The mechanism that transforms governance from aspiration to accountability.
 - **Stewardship as a collaborative practice.** Domain Data Stewards and Technical Data Stewards working in concert, with business knowledge and platform expertise as equal partners. Neither role is effective alone.
 - **Continuous improvement, not compliance theatre.** Governance measured by outcomes (data trust, time-to-access, quality scores, consumer satisfaction) not by the number of policies written or approval forms processed.
 
@@ -616,4 +820,4 @@ The four lifecycles (Data Engineering, Business Intelligence, Data Science, and 
 
 ---
 
-*This document describes the data governance lifecycle for Water Corporation's Enterprise Data & Analytics Platform (EDAP). It complements the Data Engineering Lifecycle, the Business Intelligence Lifecycle, and the Data Science Lifecycle. It draws on the DAMA-DMBOK2 framework, adapted for the EDAP's Databricks lakehouse architecture, federated governance operating model, and Western Australian regulatory context. Last updated March 2026.*
+*This document describes the data governance lifecycle for Water Corporation's Enterprise Data & Analytics Platform (EDAP). It complements the Data Engineering Lifecycle, the Business Intelligence Lifecycle, the Data Science Lifecycle, and the Medallion Architecture document. It draws on the DAMA-DMBOK2 framework, adapted for the EDAP's Databricks lakehouse architecture, federated governance operating model, and Western Australian regulatory context. Last updated March 2026.*

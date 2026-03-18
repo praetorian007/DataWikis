@@ -64,7 +64,7 @@ By 2025â2026, the industry has largely moved past the binary debate of "mon
 
 Rather than modelling every entity and attribute centrally, modern organisations maintain a **thin conceptual layer** â sometimes called an enterprise ontology, a shared vocabulary, or a set of canonical business terms. This layer defines the critical shared concepts (Customer, Asset, Product, Location) and their key relationships at a conceptual level, without prescribing physical schemas.
 
-This is closer to a business glossary with structural scaffolding than a traditional ER model. It enables cross-domain discovery and interoperability without gating individual teams.
+This is closer to a business glossary with structural scaffolding than a traditional ER model. It enables cross-domain discovery and interoperability without gating individual teams. In EDAP, this thin enterprise ontology is practically implemented through the `prod_reference` catalog, which holds cross-domain reference data (shared dimensions, code tables, geographic hierarchies) owned by Architecture & Strategy.
 
 ### 5.2 Domain-Aligned Data Models as First-Class Artefacts
 
@@ -80,7 +80,9 @@ In this world, governance is expressed through tags, access policies, data contr
 
 ### 5.4 Data Contracts Replace Upfront Schema Agreement
 
-Instead of getting all stakeholders to agree on a shared schema before integration, modern practice uses **data contracts** â explicit, versioned agreements between data producers and consumers about schema, quality, freshness, and semantics. If a producer wants to change a schema, the contract surfaces the impact and negotiation happens between two parties, not through a centralised modelling committee.
+Instead of getting all stakeholders to agree on a shared schema before integration, modern practice uses **data contracts** (see below) â explicit, versioned agreements between data producers and consumers about schema, quality, freshness, and semantics. If a producer wants to change a schema, the contract surfaces the impact and negotiation happens between two parties, not through a centralised modelling committee.
+
+A well-defined data contract typically contains: the **schema** (field names, types, nullability, and primary/foreign keys), **quality expectations** (completeness, uniqueness, referential integrity thresholds), **SLAs** (freshness guarantees, update frequency, availability targets), **ownership** (producing team, contact, escalation path), and **versioning** (semantic version, deprecation policy, breaking vs. non-breaking change rules).
 
 ### 5.5 AI Readiness Demands "Just Enough" Structure
 
@@ -119,11 +121,25 @@ Several trends are shaping the next evolution:
 
 **Data products as the unit of architecture** are replacing both the monolithic data model and the monolithic data warehouse. Each data product carries its own schema, metadata, quality guarantees, and access policies â making it self-describing in a way the EDM always aspired to be.
 
+**AI agents as data product consumers** are an emerging pattern. In practice, AI agents interact with domain data products through several mechanisms: **Genie spaces** backed by Gold-layer tables provide natural-language query access; **Unity Catalog functions** enable agents to call governed SQL or Python logic via function-calling interfaces; and **Model Serving endpoints** expose domain-specific models and retrieval-augmented generation (RAG) pipelines that draw on curated domain data. This means data products must be well-described (clear column names, comments, semantic metadata) to be effective for both human and AI consumption.
+
 **Composable, modular architectures** â API-first, event-driven, and platform-native â mean that integration is handled through interfaces and contracts rather than through upfront structural agreement.
 
 ---
 
-## 8. Key Takeaways for Practitioners
+## 8. How EDAP Implements These Principles
+
+Water Corporation's Enterprise Data Analytics Platform (EDAP) puts the pragmatic middle ground into practice:
+
+- **Domain catalogs as the unit of ownership.** Each of WC's seven data domains has its own Unity Catalog catalog (e.g. `prod_asset`, `prod_customer`, `prod_network`). Domain teams own and model the data within their catalog, consistent with the principle of pushing modelling responsibility to domain teams.
+- **The `product` schema as the Gold layer.** Within each domain catalog, the `product` schema contains certified, contracted data products. These are the governed, discoverable outputs that replace the EDM's aspiration for a single enterprise view. Each data product carries a data contract specifying schema, SLAs, quality expectations, ownership, and versioning.
+- **Governed tags for classification and discovery.** Rather than encoding governance into a monolithic model, EDAP uses Unity Catalog governed tags (`sensitivity`, `pi_category`, `soci_critical`, `data_product_tier`, etc.) to classify, discover, and enforce access policies dynamically. Tags propagate through lineage and drive ABAC policies.
+- **Data contracts as the interoperability mechanism.** Cross-domain integration is achieved through explicit data contracts between producer and consumer domains, not through upfront schema agreement. Contracts specify schema, quality expectations, freshness SLAs, ownership, and versioning — enabling independent evolution while maintaining interoperability.
+- **The `prod_reference` catalog as a thin enterprise ontology.** Cross-domain reference data (shared dimensions, code tables, geographic hierarchies) is maintained in the `prod_reference` catalog, owned by Architecture & Strategy. This serves as the practical implementation of the "thin enterprise ontology" — a lightweight, governed set of shared concepts that enables cross-domain discovery without a monolithic model.
+
+---
+
+## 9. Key Takeaways for Practitioners
 
 1. **Don't build a monolithic EDM for a new data platform.** It will be out of date before it's finished, and it will gate delivery rather than accelerate it.
 
