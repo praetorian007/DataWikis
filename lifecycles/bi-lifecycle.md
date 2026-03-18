@@ -44,7 +44,7 @@ The BI lifecycle does not operate in isolation. It depends upon and complements 
 
 ---
 
-## The BI Lifecycle Stages
+## Core Stages
 
 ### 1. Analyse
 
@@ -84,7 +84,7 @@ The Design stage translates business requirements into a technical and visual bl
 
   In 2026, the semantic model is not just a BI artefact – it is **shared infrastructure**. A well-designed semantic layer serves dashboards, ad-hoc SQL queries, AI copilots, natural language query interfaces, embedded analytics, and AI agents from a single, governed definition. This means metric definitions, business rules, row-level security, and time intelligence (YTD, MTD, rolling periods) must be encoded once and applied consistently everywhere.
 
-  For a Databricks-centric stack, this means designing within the Databricks AI/BI semantic model or leveraging Power BI's Tabular/DAX semantic model connected via Direct Lake or XMLA. The key principle is: **define metrics once, use them everywhere**.
+  For a Databricks-centric stack, this means designing within the Databricks AI/BI semantic model or leveraging Power BI's Tabular/DAX semantic model connected via Direct Lake or XMLA. **Unity Catalog Metrics (UC Metrics)** is Databricks' native semantic layer for defining governed business metrics centrally within Unity Catalog. Metrics defined in UC Metrics can be consumed directly by AI/BI Dashboards, Genie, and AI agents, ensuring that business definitions are consistent across all Databricks-native consumption channels. The key principle is: **define metrics once, use them everywhere**.
 
 - **Visualisation Design** – Plan the layout, format, and types of visualisations that will be used. Design with the consumer's decision-making process in mind: what question does each page answer? What action should the user take after seeing this view? Follow established information design principles: minimise clutter, use pre-attentive attributes (colour, position, size) to direct attention, and design for the "five-second test" – can a user grasp the key message within five seconds of seeing the page?
 
@@ -127,6 +127,8 @@ The critical interface between BI and data engineering is the **Gold layer** of 
 - **Security and Access Control** – Implementing row-level security (RLS), column-level security, workspace access controls, and data classification labels to ensure that users see only the data they are authorised to access. Security must be designed into the semantic model, not layered on at the report level.
 - **Performance Optimisation** – Optimising query performance through aggregation tables, incremental refresh, caching strategies, composite models (import + Direct Lake/DirectQuery), and appropriate data compression. Poorly performing reports destroy adoption.
 
+- **Serverless SQL Warehouses** – For Databricks-based BI workloads, **Serverless SQL Warehouses** are the recommended compute option. They eliminate cluster management overhead, provide instant startup for ad-hoc queries, and scale automatically based on demand. This makes them particularly well-suited to BI consumption patterns where query volume is variable and users expect immediate responsiveness. Serverless SQL Warehouses serve as the compute layer for AI/BI Dashboards, Genie, and any SQL-based analytics consuming from the Gold layer.
+
 - **Power BI Direct Lake Mode** – Direct Lake is a storage mode in Power BI that reads Delta tables directly from the lakehouse without importing data into the Power BI model or issuing DirectQuery queries at runtime. It combines the performance characteristics of Import mode (data cached in the VertiPaq engine) with the freshness of DirectQuery (no ETL copy required), because the engine reads directly from Delta/Parquet files in storage. Direct Lake is the preferred mode when BI solutions consume from Gold-layer Delta tables in the medallion architecture — it eliminates the data duplication inherent in Import mode and avoids the query performance limitations of DirectQuery against large datasets. Direct Lake works best with well-structured Gold-layer star schemas where tables are optimised for analytical queries (appropriate file sizes, liquid clustering, and Z-ordering). It differs from DirectQuery in that it does not push queries to the source engine at runtime (reducing source system load), and from Import in that it does not require scheduled refresh to ingest data (the model reflects the latest Delta table state automatically). Use Direct Lake as the default for Gold-layer consumption in Power BI; fall back to Import for small reference tables or scenarios requiring complex DAX that Direct Lake does not yet fully support, and to DirectQuery only where real-time source system queries are genuinely required.
 
 **Guidance:**
@@ -134,6 +136,7 @@ The critical interface between BI and data engineering is the **Gold layer** of 
 - BI solutions must be built on the Gold layer. Building reports directly against Bronze or Silver data bypasses data quality enforcement and creates ungoverned, inconsistent outputs.
 - Work collaboratively with data engineering. The BI team should not be building its own ETL pipelines; it should be consuming well-governed data products from the data engineering team and providing feedback on gaps or quality issues.
 - Treat the semantic layer as code: version-controlled, tested, reviewed, and promoted through environments (dev → test → prod) just like pipeline code.
+- Use **Databricks Asset Bundles (DABs)** as the CI/CD mechanism for deploying BI assets — dashboards, SQL queries, alerts, and semantic model definitions — as code. DABs enable teams to define, test, and promote BI artefacts through environments using the same infrastructure-as-code practices applied to data engineering pipelines, ensuring consistency and auditability across deployments.
 - Test end-to-end before releasing to users: data quality, metric accuracy, security rules, and performance under realistic load.
 
 **Key Roles:** Data Engineer (pipeline development and Gold-layer modelling), BI Developer (semantic layer implementation), Data Architect (data architecture alignment), Data Steward (quality validation and governance).
@@ -155,6 +158,8 @@ The Visualise stage is where insight is delivered to consumers. It transforms th
 - **Alerting and Anomaly Detection** – Configuring automated alerts that notify users when metrics breach defined thresholds, when anomalies are detected, or when significant changes occur. This shifts BI from a pull model (user goes to dashboard) to a push model (insight comes to user), enabling faster response to emerging issues.
 
 - **Embedded Analytics** – Integrating BI visualisations and metric queries directly into operational applications and business workflows, so that users encounter data-driven insights in the context of their daily work rather than switching to a separate BI tool.
+
+- **Databricks Apps** – For custom analytical applications that go beyond what standard dashboards provide, **Databricks Apps** allow teams to build and deploy bespoke interactive applications directly on the Databricks platform. These apps run natively within the workspace, consume governed data from Unity Catalog, and complement AI/BI Dashboards and Power BI for use cases requiring custom logic, specialised visualisations, or tailored user workflows.
 
 - **Interactive Features** – Implementing filters, slicers, drill-through, tooltips, bookmarks, and personalised views that enable users to explore data dynamically and customise their experience.
 
@@ -185,7 +190,7 @@ The Monitor stage ensures that BI solutions continue to deliver value after go-l
 
 - **System Performance Monitoring** – Track dashboard load times, query execution times, refresh durations, and semantic model processing performance. Set performance SLOs (e.g. "P95 dashboard load time < 5 seconds") and alert when they are breached. Performance degradation is one of the fastest ways to kill BI adoption.
 
-- **Usage Analytics and Adoption Tracking** – Monitor how users interact with BI solutions: which reports are accessed, how frequently, by whom, and which features (filters, drill-downs, AI copilot queries) are used. Usage analytics reveal whether the BI solution is actually driving decisions or just accumulating dust. Identify unused reports and retire them; identify high-usage reports and invest in their improvement.
+- **Usage Analytics and Adoption Tracking** – Monitor how users interact with BI solutions: which reports are accessed, how frequently, by whom, and which features (filters, drill-downs, AI copilot queries) are used. Usage analytics reveal whether the BI solution is actually driving decisions or just accumulating dust. Identify unused reports and retire them; identify high-usage reports and invest in their improvement. For Databricks-based BI workloads, **system tables** (available in Unity Catalog) provide built-in telemetry for BI usage analytics, cost attribution, and query performance monitoring. System tables capture query history, warehouse utilisation, and user activity across SQL warehouses and AI/BI Dashboards, enabling teams to understand consumption patterns, allocate costs to business domains, and identify slow-running queries without deploying separate monitoring infrastructure.
 
 - **Metric Health and Semantic Observability** – Monitor the health and consistency of the semantic model. Are metric definitions producing expected values? Are AI copilot responses accurate and consistent? Are there signs of semantic drift – where a metric's meaning or calculation has shifted over time without governance? This emerging practice of **semantic observability** is particularly important as AI agents and NLQ interfaces consume the semantic layer; inconsistencies that a human might notice and work around will propagate silently through automated systems.
 
@@ -240,7 +245,7 @@ Implement access controls, row-level security, data classification, encryption, 
 
 ### Data Governance
 
-Maintain the Data Catalog, ensure data quality, manage metadata (including metric definitions, lineage, and ownership), and enforce governance policies throughout the BI lifecycle. The BI team is both a consumer and a contributor to governance: consuming governed data products from the data engineering team, and contributing metric definitions, usage patterns, and quality feedback back to the governance framework.
+Maintain the Data Catalog, ensure data quality, manage metadata (including metric definitions, lineage, and ownership), and enforce governance policies throughout the BI lifecycle. The BI team is both a consumer and a contributor to governance: consuming governed data products from the data engineering team, and contributing metric definitions, usage patterns, and quality feedback back to the governance framework. **Unity Catalog tags** provide a mechanism for classifying and discovering BI assets — dashboards, queries, semantic models, and the underlying tables they depend on. Tags enable teams to label assets by domain, sensitivity, lifecycle stage, or ownership, making it straightforward to search, audit, and apply governance policies consistently across the BI estate.
 
 ---
 
