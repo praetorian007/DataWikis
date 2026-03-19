@@ -16,7 +16,7 @@ This document outlines the key stages, disciplines, and contemporary practices i
 
 - **The rise of Generative AI and Large Language Models** – LLMs, RAG architectures, and agentic AI systems have expanded the scope of what "data science" means in an enterprise. The discipline now encompasses not just classical ML (regression, classification, clustering, time series) and mathematical optimisation (scheduling, resource allocation, network design) but also prompt engineering, fine-tuning, retrieval-augmented generation, and the orchestration of AI agents. The toolkit has expanded; the rigour required has not diminished.
 - **MLOps as a mature discipline** – The gap between "model works in a notebook" and "model delivers value in production" has been the graveyard of data science initiatives. MLOps – the application of DevOps principles to machine learning – has matured from an aspiration to a baseline expectation. Automated training pipelines, model registries, continuous monitoring, drift detection, and governed deployment are now standard practice for serious enterprise data science.
-- **AI Governance and Responsible AI** – Regulatory frameworks (EU AI Act, evolving Australian AI Ethics principles, sector-specific requirements under the SOCI Act) are moving from guidance to enforcement. Explainability, fairness, bias detection, audit trails, and human oversight are no longer optional extras – they are design constraints that must be embedded throughout the lifecycle.
+- **AI Governance and Responsible AI** – Regulatory frameworks (EU AI Act, Privacy Act 1988 (Cth) reform programme with automated decision-making obligations, Australian Government Voluntary AI Safety Standard (2024), sector-specific requirements under the SOCI Act 2018 including 2024 SOCI Rules amendments expanding positive security obligations) are moving from guidance to enforcement. Explainability, fairness, bias detection, audit trails, human oversight, and contestability are no longer optional extras – they are design constraints that must be embedded throughout the lifecycle.
 
 The lifecycle stages described here – **Discover, Prepare, Experiment, Evaluate, Deploy, and Monitor** – provide the durable structure. What changes is the breadth of techniques, the maturity of tooling, and the governance rigour applied at each stage.
 
@@ -71,7 +71,7 @@ The Discover stage is where data science projects are born – or should be kill
 
 - **Stakeholder Alignment** – Engage with business stakeholders to set expectations about what data science can and cannot deliver, the timeline, the uncertainty involved, and the criteria for success. Data science projects are inherently experimental – not every hypothesis will pan out, and stakeholders need to understand that negative results (proving that a model cannot reliably predict something) are still valuable results.
 
-- **Ethical and Governance Assessment** – Identify potential ethical risks early. Does the model involve decisions that affect individuals (hiring, lending, service prioritisation)? Are there protected attributes in the data? What are the regulatory requirements? For high-risk AI applications (as defined by the EU AI Act or equivalent frameworks), governance requirements must be designed in from the outset, not bolted on at deployment.
+- **Ethical and Governance Assessment** – Identify potential ethical risks early. Does the model involve decisions that affect individuals (hiring, lending, service prioritisation)? Are there protected attributes in the data? What are the regulatory requirements? Where personal information is used in training data, confirm the lawful basis for its use and ensure the `pi_lawful_basis` governed tag (see EDAP Tagging Strategy) is applied to relevant datasets. For high-risk AI applications (as defined by the EU AI Act or equivalent frameworks), governance requirements must be designed in from the outset, not bolted on at deployment.
 
 - **Use Case Prioritisation** – Evaluate and prioritise candidate use cases by business value, feasibility, data readiness, and risk. The best data science teams maintain a prioritised backlog of use cases, just as software teams maintain a product backlog.
 
@@ -102,7 +102,7 @@ The Prepare stage transforms raw data into the features and datasets that models
 
 - **Data Labelling** – For supervised learning, ensure that labels are accurate, consistent, and well-defined. Labelling is often a bottleneck – consider whether weak supervision, active learning, or transfer learning can reduce the labelling burden. For GenAI applications, this stage includes curating the knowledge bases and document corpora that will feed RAG pipelines.
 
-- **Bias and Fairness Assessment** – Examine the training data for potential biases that could lead to unfair model outcomes. Are certain demographic groups under-represented? Are historical outcomes (which the model learns from) themselves biased? Document and mitigate identified biases before proceeding to modelling.
+- **Bias and Fairness Assessment** – Examine the training data for potential biases that could lead to unfair model outcomes. Are certain demographic groups under-represented? Are historical outcomes (which the model learns from) themselves biased? Document and mitigate identified biases before proceeding to modelling. Where training data contains personal information, verify that the lawful basis for processing is documented (`pi_lawful_basis` tag) and that consent scope covers use in model training — particularly relevant as the Privacy Act 1988 (Cth) reform programme introduces explicit obligations around automated decision-making.
 
 **Guidance:**
 
@@ -284,9 +284,21 @@ Responsible AI is the practice of developing and deploying AI systems that are f
 - **Transparency** – Maintain comprehensive documentation of the model's purpose, training data, limitations, known biases, and intended use. Model cards and datasheets are practical formats for this documentation.
 - **Accountability** – Establish clear ownership, review processes, and escalation paths. For high-risk applications, implement human-in-the-loop decision making. Maintain audit trails for model decisions.
 - **Safety and Security** – Protect models against adversarial attacks, prompt injection (for LLMs), data poisoning, and model extraction. Implement input validation, output filtering, and rate limiting for production endpoints.
-- **Regulatory Compliance** – Maintain awareness of and compliance with applicable regulations: the EU AI Act (high-risk AI system requirements coming into full enforcement), Australian AI Ethics Framework, sector-specific requirements under SOCI Act, and data handling requirements under the PRIS Act and State Records Act.
+- **Regulatory Compliance** – Maintain awareness of and compliance with applicable regulations: the EU AI Act (high-risk AI system requirements coming into full enforcement), Australian Government Voluntary AI Safety Standard (2024), Privacy Act 1988 (Cth) including the Notifiable Data Breaches scheme (Part IIIC) and the reform programme's automated decision-making obligations, sector-specific requirements under SOCI Act 2018 (including 2024 SOCI Rules amendments), and data handling requirements under the PRIS Act 2024, State Records Act 2000, and WAICP.
+- **Contestability** – Ensure that individuals affected by automated decisions made or informed by ML models have the right to seek explanation and human review. Design contestability mechanisms into model-informed decision workflows from the outset — this is a core requirement of the Privacy Act reform programme and the Voluntary AI Safety Standard. For high-risk applications, maintain the ability to provide a meaningful explanation of the factors that influenced a specific decision, not just aggregate model explainability.
 
 Responsible AI is not a stage in the lifecycle – it is a lens applied at every stage. Governance checkpoints should be integrated into the Discover (ethical assessment), Prepare (bias assessment), Evaluate (fairness evaluation), Deploy (governance review), and Monitor (ongoing fairness monitoring) stages.
+
+**Key standards and frameworks:**
+
+| Standard | Relevance to Data Science |
+|---|---|
+| ISO/IEC 42001:2023 — AI Management Systems | Establishes the management system for AI risk, governance, and responsible development across the organisation |
+| NIST AI Risk Management Framework (AI RMF 1.0) | Provides the structured approach to AI risk identification, assessment, and mitigation throughout the model lifecycle |
+| Australian Government Voluntary AI Safety Standard (2024) | Sets expectations for transparency, contestability, accountability, and human oversight in AI systems |
+| Privacy Act 1988 (Cth) — reform programme | Introduces automated decision-making obligations, consent requirements for AI training data, and the right to meaningful explanation |
+| EU AI Act | Defines high-risk AI categories, conformity requirements, and transparency obligations |
+| SOCI Act 2018 (incl. 2024 amendments) | Sector-specific security obligations for critical infrastructure data and systems |
 
 ---
 
@@ -299,7 +311,7 @@ Features are the building blocks of ML models, and their management is a discipl
 - **Discoverable** – Data scientists can browse and search available features before engineering new ones, avoiding duplicate effort.
 - **Consistent** – The same feature definition is used for training and inference (eliminating training-serving skew).
 - **Point-in-time correct** – For time-dependent problems, features are computed as they would have been at the time of prediction, preventing data leakage.
-- **Governed** – Feature lineage, ownership, and access controls are managed through Unity Catalog, providing the same governance for features as for any other data asset. **Governed tags** in Unity Catalog enable consistent classification and discovery of ML assets – tagging models, features, and datasets by domain, sensitivity, model risk tier, or regulatory scope so that teams can find, assess, and reuse assets with confidence.
+- **Governed** – Feature lineage, ownership, and access controls are managed through Unity Catalog, providing the same governance for features as for any other data asset. **Governed tags** in Unity Catalog enable consistent classification and discovery of ML assets – tagging models, features, and datasets by domain, sensitivity, model risk tier, or regulatory scope so that teams can find, assess, and reuse assets with confidence. The full tag taxonomy — including `model_risk_tier`, `ai_governance_level`, `pi_lawful_basis`, and `quality_tier` — is defined in the EDAP Tagging Strategy and should be applied consistently to all ML assets registered in Unity Catalog.
 
 Feature management is where data science and data engineering collaborate most closely. Data engineering builds the pipelines that compute and materialise features; data science defines what those features should be and consumes them for model training and inference.
 
@@ -307,7 +319,7 @@ Feature management is where data science and data engineering collaborate most c
 
 ### Security and Compliance
 
-Implement access controls, model endpoint security, data encryption, and audit logging throughout the data science lifecycle. Protect training data, model artefacts, feature stores, and inference endpoints. Ensure compliance with applicable regulations (SOCI Act, PRIS Act, State Records Act, Essential Eight). Particular attention should be paid to:
+Implement access controls, model endpoint security, data encryption, and audit logging throughout the data science lifecycle. Protect training data, model artefacts, feature stores, and inference endpoints. Ensure compliance with applicable regulations (SOCI Act 2018 including 2024 SOCI Rules amendments, Privacy Act 1988 (Cth) including the Notifiable Data Breaches scheme, PRIS Act 2024, State Records Act 2000, WAICP, Essential Eight). Particular attention should be paid to:
 
 - Access control for sensitive training data and model artefacts via Unity Catalog.
 - Endpoint security for real-time model serving (authentication, authorisation, rate limiting).
@@ -327,6 +339,18 @@ Generative AI workloads introduce a fundamentally different cost profile to trad
 
 ---
 
+### Environmental Sustainability of Compute
+
+ML training, hyperparameter searches, and GenAI inference are among the most compute-intensive workloads in the enterprise. Environmental sustainability of data science compute is an emerging responsibility:
+
+- **Right-size training runs.** Use progressive training strategies — start with data subsets and smaller architectures to validate feasibility before committing to full-scale training. Terminate unpromising experiments early rather than letting them run to completion.
+- **Model distillation as a sustainability strategy.** Where a large model delivers strong performance, distil it into a smaller, faster, cheaper model for production serving. This reduces ongoing inference costs and energy consumption simultaneously.
+- **Carbon-aware scheduling.** Where platform capabilities permit, schedule large training runs during periods of lower carbon intensity or lower grid demand. Databricks serverless compute can be leveraged to consolidate workloads onto shared infrastructure with higher utilisation efficiency.
+- **Track compute footprint.** Monitor and report on GPU-hours, token consumption, and associated energy costs per project. Include compute sustainability as a factor in model selection — a model that is 2% more accurate but requires 10x the compute may not be the right choice.
+- **Optimise inference.** Quantisation, batching, caching, and model selection (right-sizing model capability to task complexity) reduce the ongoing energy footprint of production AI systems.
+
+---
+
 ### Collaboration
 
 Data science is a team sport that spans organisational boundaries. The most effective data science functions maintain tight collaboration with data engineering (who provide the data platform, feature pipelines, and Gold-layer data products), BI (who surface model outputs in dashboards and alerts), business domain experts (who provide the context that makes models useful), and governance teams (who ensure responsible AI practices). Embed data scientists within business domains where possible; co-location (physical or virtual) dramatically improves problem framing, feature engineering, and adoption of model outputs.
@@ -335,7 +359,18 @@ Data science is a team sport that spans organisational boundaries. The most effe
 
 ### Continuous Improvement
 
-Data science capabilities mature through iteration, not big-bang delivery. Establish feedback loops between model consumers and the data science team. Regularly review model performance, business impact, and alignment with evolving business questions. Retire models that no longer deliver value. Invest in platform capabilities (Feature Store, MLOps infrastructure, experiment tracking) that compound in value across projects. In a SAFe environment, data science work should flow as stories within domain-driven business epics, prioritised alongside data engineering and BI work to ensure alignment across all three lifecycles.
+Data science capabilities mature through iteration, not big-bang delivery. Establish feedback loops between model consumers and the data science team. Regularly review model performance, business impact, and alignment with evolving business questions. Invest in platform capabilities (Feature Store, MLOps infrastructure, experiment tracking) that compound in value across projects. In a SAFe environment, data science work should flow as stories within domain-driven business epics, prioritised alongside data engineering and BI work to ensure alignment across all three lifecycles.
+
+**Model Lifecycle Management:** Models are data products and should follow the same lifecycle as any governed data product:
+
+| State | Description |
+|---|---|
+| **Incubation** | Model is under active development or in pilot with limited consumers. SLAs are best-effort. |
+| **Active** | Model is in production, monitored, and delivering value. SLAs are defined and enforced. |
+| **Deprecation** | Model is scheduled for retirement. Consumers are notified and given a migration timeline. No new consumers are onboarded. |
+| **Retirement** | Model is decommissioned. Endpoints are removed, artefacts are archived, and the registry entry is marked as archived. |
+
+Establish clear criteria for state transitions — particularly the trigger for deprecation (sustained performance degradation, supersession by a better model, business need no longer exists) — and communicate timelines to downstream consumers.
 
 ---
 
@@ -372,6 +407,30 @@ The data science lifecycle is fundamentally about turning data into intelligent 
 The data science lifecycle exists to ensure that the organisation's investment in data, platform, and talent translates into intelligent systems that drive better decisions, automate complex processes, and create competitive advantage. Models that are not deployed, monitored, and governed are cost without return. The lifecycle is how we close the loop.
 
 The four lifecycles – Data Engineering, Business Intelligence, Data Science, and Data Governance – form a coherent whole. Data engineering provides the foundation; BI turns data into decisions; data science turns data into intelligence; and data governance ensures that all three operate on a foundation of trust, quality, and accountability. Together, they represent the enterprise data capability.
+
+---
+
+## References
+
+| Source | Relevance |
+|---|---|
+| CRISP-DM (Cross-Industry Standard Process for Data Mining) | Foundation methodology for the six-stage lifecycle structure |
+| Fundamentals of Data Engineering, 2nd edition (Reis & Housley, 2025) | Data engineering lifecycle that data science consumes and feeds back into |
+| ISO/IEC 42001:2023 — AI Management Systems | Management system standard for AI risk, governance, and responsible development |
+| NIST AI Risk Management Framework (AI RMF 1.0) | Structured approach to AI risk identification, assessment, and mitigation |
+| Australian Government Voluntary AI Safety Standard (2024) | National expectations for transparency, contestability, accountability, and human oversight |
+| Privacy Act 1988 (Cth) — incl. Notifiable Data Breaches scheme (Part IIIC) and reform programme | Automated decision-making obligations, consent for AI training data, breach notification |
+| SOCI Act 2018 (incl. 2024 SOCI Rules amendments) | Critical infrastructure security obligations with expanded positive security requirements |
+| PRIS Act 2024 (WA) | Western Australian public records and information sharing |
+| State Records Act 2000 (WA) | Retention and disposal obligations for records including model artefacts |
+| WAICP (WA Information Classification Policy) | Classification framework for government information assets |
+| Essential Eight (ACSC) | Baseline cybersecurity mitigation strategies |
+| EU AI Act | High-risk AI categorisation, conformity assessment, and transparency obligations |
+| MLflow | Open-source experiment tracking, model registry, and evaluation platform |
+| Databricks Mosaic AI | Model Serving, Feature Engineering, Vector Search, Agent Framework, AI Gateway |
+| Databricks Asset Bundles (DABs) | Packaging and deployment mechanism for ML projects |
+| EDAP Tagging Strategy | Governed tag taxonomy for Unity Catalog assets including ML-specific tags |
+| Domain Governance Across Systems | Three-layer governance architecture, data contracts, Delta Sharing governance |
 
 ---
 

@@ -22,7 +22,7 @@ specifications/   — Technical specifications and framework requirements
 
 - **Water Corporation** — Western Australian water utility
 - **EDAP** — Enterprise Data & Analytics Platform, built on Databricks lakehouse with Unity Catalog
-- **Medallion Architecture** — Bronze/Silver/Gold layers with zone decomposition (Landing, Raw, Processed, Protected, Base, Enriched, Exploratory, Dimensional, Sandbox, Quarantine)
+- **Medallion Architecture** — Bronze/Silver/Gold layers with zone decomposition (Landing, Raw | Protected, Base, Enriched | Exploratory, BI, Sandbox)
 - **Unity Catalog** — Databricks governance layer for access control, lineage, and metadata
 - **Alation** — Enterprise data discovery and cataloguing tool
 - **Seven data domains** — Water Corporation organises data across seven business domains

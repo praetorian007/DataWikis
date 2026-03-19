@@ -1,12 +1,10 @@
 # Data Domains
 
-**TSG Architecture Office**
-
-> **Author:** Mark Shaw – Principal Data Architect
+**Mark Shaw** | Principal Data Architect
 
 ---
 
-The way we structure and govern our data is critical to how we operate. To manage the scale and complexity of our data landscape, we use a clear and intentional model built around core data domains – broad areas like Customer, Asset, Operations, Finance, Legal and Compliance, and People.
+The way we structure and govern our data is critical to how we operate. To manage the scale and complexity of our data landscape, we use a clear and intentional model built around core data domains – broad areas like Customer, Asset, Operations, Finance, Legal & Compliance, People, and Technology & Digital.
 
 Each domain is responsible for a specific set of conceptual data entities, not just based on who uses the data, but who owns it. For example, while customer teams rely heavily on data from service meters for billing and usage insights, the Asset domain owns the meter itself – its specifications, installation details, and lifecycle history. That distinction matters. It ensures accountability for data quality, clarifies stewardship, and reduces duplication or confusion across systems.
 
@@ -24,7 +22,7 @@ A data domain is a high-level grouping of related data entities that reflects a 
 
 ## What Do Our Domains Look Like?
 
-The Water Corporation's data landscape has six data domains:
+The Water Corporation's data landscape has seven data domains:
 
 | Data Domain | Focus |
 |---|---|
@@ -34,7 +32,7 @@ The Water Corporation's data landscape has six data domains:
 | **Finance** | All data related to our financial activities, including revenue management and expenditure management (procurement and cost accounting). The Finance team owns these data entities – from tariffs and invoices to budgets and ledgers – ensuring financial integrity and compliance across the corporation. |
 | **Legal & Compliance** | Data related to our legal obligations, regulatory compliance, and corporate governance. This includes records of contracts, permits, regulatory reports, and compliance activities that the Legal/Compliance teams own and maintain. |
 | **People** | Data about our workforce and organisational structure. It includes information on employees, their roles and qualifications, organisational units, and HR-related records. The People team own these data entities, ensuring that all personnel data – from staffing and skills to organisational hierarchy – is managed as a secure and consistent resource. |
-| **Technology & Digital** *(TBD)* | Data about our IT and digital platforms, technology infrastructure, applications, and technology services. It covers the lifecycle of hardware and software assets, user-facing applications, integration services, and digital service support functions. |
+| **Technology & Digital** | Data about our IT and digital platforms, technology infrastructure, applications, and technology services. It covers the lifecycle of hardware and software assets, user-facing applications, integration services, and digital service support functions. This domain is in early definition; its boundary with Asset (for OT/SCADA infrastructure) and Operations (for IT service events) will be refined as Enterprise Data & Analytics Platform (EDAP) onboarding progresses. |
 
 ---
 
@@ -60,7 +58,7 @@ The Water Corporation's data landscape has six data domains:
 |---|---|
 | **Service Premise (Service Location)** | The physical address or site where water service is delivered and metered. |
 | **Service Agreement** | The agreement that defines the service terms for a customer at a premise (e.g. a water service contract linking a customer account to a service point), including rate plans and conditions. |
-| **Consumption Record** | A recorded measurement of water usage tied to a specific premise and billing period, used to drive invoicing and analysis. |
+| **Consumption Record** | A billing-period aggregation of water usage tied to a specific premise and account, derived from one or more meter readings and used to drive invoicing and consumption analysis. Distinguished from the Operations domain's Meter Reading, which captures the raw field collection event. |
 | **Service Request** | A customer-initiated request or case (e.g. a new connection application, service issue report, or complaint). |
 
 #### Marketing & Public Relations
@@ -88,6 +86,8 @@ The Water Corporation's data landscape has six data domains:
 | **Research Finding** | Insights and conclusions derived from analysing market research data e.g. "75% of customers prefer e-billing"; "High awareness but low adoption of leak-detection tips." |
 
 #### Billing & Tariffs
+
+> *These concepts describe the customer-facing assignment of tariffs and billing preferences. Tariff plan definition and lifecycle management is owned by the Finance domain.*
 
 | Concept | Description |
 |---|---|
@@ -173,7 +173,7 @@ The Water Corporation's data landscape has six data domains:
 | Concept | Description |
 |---|---|
 | **Service Order** | An authorisation for non-maintenance operations, such as new connections, disconnections, or meter installations e.g. new service connection for a residential property; service meter exchange request. |
-| **Meter Reading** | A recorded measurement of water consumption captured by field personnel or automated systems e.g. monthly reading of a residential service meter; hourly data from a smart meter. |
+| **Meter Reading** | A raw measurement of water consumption captured by field personnel or automated systems at a point in time e.g. monthly reading of a residential service meter; hourly data from a smart meter. Distinguished from the Customer domain's Consumption Record, which aggregates readings into billing-period totals for invoicing. |
 | **Field Activity** | A record of all field-based operations, including crew dispatch, travel, and onsite activities e.g. crew assignment logs; GPS-tracked route for meter reading. |
 
 #### Water Quality
@@ -276,6 +276,8 @@ The Water Corporation's data landscape has six data domains:
 | **Audit Trail** | A sequence of linked records (journal entries, approvals, adjustments) ensuring traceability and transparency of all financial transactions. |
 
 #### Tariff Management
+
+> *These concepts describe the creation, pricing, and lifecycle of tariff plans. Customer-facing tariff assignment and billing preferences are owned by the Customer domain.*
 
 | Concept | Description |
 |---|---|
@@ -406,7 +408,7 @@ The Water Corporation's data landscape has six data domains:
 
 ---
 
-### Technology & Digital *(TBD)*
+### Technology & Digital
 
 #### Application & Service Inventory
 
@@ -485,11 +487,65 @@ The following considerations help to ensure that each data concept is assigned t
 
 **Lifecycle Management Responsibility** – Consider which domain oversees the data throughout its lifecycle, from creation to archival or deletion e.g. employee records, from hiring to termination, are managed by Human Resources, aligning them with the People domain.
 
-**Regulatory and Compliance Considerations** – If the data concept is subject to specific regulatory requirements, assign it to the domain responsible for ensuring compliance e.g. environmental impact data, subject to regulatory reporting, should be under the Legal and Compliance domain.
+**Regulatory and Compliance Considerations** – If the data concept is subject to specific regulatory requirements, assign it to the domain responsible for ensuring compliance e.g. environmental impact data, subject to regulatory reporting, should be under the Legal & Compliance domain.
 
 **Data Usage vs. Data Ownership** – Differentiate between domains that use the data and those that own it. Assign the data concept to the owning domain e.g. operational teams may use customer feedback data, but if the Customer Service team manages and maintains it, it belongs to the Customer domain.
 
 **Shared Data Concepts** – For data concepts used across multiple domains, determine the primary owner based on who has the most significant responsibility for the data e.g. service meter data is used by both Customer and Operations domains, but as Asset Management installs and maintains the meters, the data resides in the Asset domain.
+
+---
+
+## Enterprise Reference Data
+
+Not all data belongs neatly within a single business domain. Genuinely cross-cutting reference data, such as organisational hierarchy, geographic location master, calendar and fiscal period, and unit of measure, does not have a natural business domain owner in the way that customer accounts or asset registers do.
+
+Rather than forcing this data into an arbitrary domain, EDAP maintains a dedicated `prod_reference` catalog owned by Architecture & Strategy. This catalog holds shared dimensions, code tables, and geographic hierarchies that are consumed across all seven domains. The corresponding `data_domain` governed tag value is `enterprise_reference`, with a nominated enterprise data steward (CIO delegate) accountable for quality and currency.
+
+Domain teams consume reference data from `prod_reference` via cross-catalog joins or views, and contribute updates through a controlled change process governed by the enterprise data steward. This avoids reference data being orphaned because no single business domain claims it, while ensuring it remains governed, versioned, and discoverable.
+
+---
+
+## How Domains Map to EDAP
+
+The seven data domains are not just conceptual groupings; they are directly reflected in the Enterprise Data & Analytics Platform (EDAP) through Unity Catalog's namespace design, governed tags, and access control model.
+
+### Catalog and Schema Naming
+
+EDAP uses layer-based catalogs (`prod_bronze`, `prod_silver`, `prod_gold`) with domain-aligned schemas within each. The domain appears in the schema name from Silver Enriched onward:
+
+| Layer / Zone | Schema Naming Pattern | Example |
+|---|---|---|
+| Bronze (Raw) | `<source_system>_raw` | `prod_bronze.sap_raw` |
+| Silver (Base) | `<source_system>_base` | `prod_silver.maximo_base` |
+| Silver (Enriched) | `<domain>_enriched` | `prod_silver.asset_enriched` |
+| Gold (BI) | `<domain>_bi` | `prod_gold.customer_bi` |
+| Gold (Exploratory) | `<domain>_exploratory` | `prod_gold.operations_exploratory` |
+
+At Bronze and Silver Base, schemas are source-system-aligned because the data has not yet been transformed into domain structures. From Silver Enriched onward, domain teams own and model the data within their schemas.
+
+### Governed Tags
+
+Every table from Silver Base onward carries a `data_domain` governed tag identifying its owning domain. The permitted values are:
+
+`customer` | `asset` | `operations` | `finance` | `legal_compliance` | `people` | `technology_digital` | `enterprise_reference`
+
+These tags drive discovery (filtering in the Discover marketplace), stewardship routing, cost attribution, and ABAC policy scoping.
+
+### Domain Access Groups
+
+Each domain has a set of Entra ID security groups that control access:
+
+| Group Pattern | Purpose |
+|---|---|
+| `wc_domain_<domain>_reader` | Read access to the domain's Silver Enriched and Gold schemas |
+| `wc_domain_<domain>_contributor` | Write access for domain data engineers and stewards |
+| `wc_domain_<domain>_owner` | MANAGE privilege at the schema level for domain governance |
+
+Domain owners hold MANAGE privilege at the schema level (not catalog level), enabling them to govern access within their schemas while the platform team retains catalog-level administration.
+
+### Data Contracts
+
+Cross-domain data sharing is formalised through data contracts, which are explicit, versioned agreements between a producer domain and a consumer domain. A data contract specifies the schema (guaranteed column structure and types), quality expectations (completeness, uniqueness, referential integrity thresholds), freshness SLAs (maximum acceptable latency), ownership (producing team and contact), and versioning (semantic version with a defined deprecation policy for breaking changes). Contracts are enforced through the SDP pipeline framework and monitored via Lakehouse Monitoring and DQ expectations.
 
 ---
 
@@ -511,7 +567,7 @@ We've intentionally kept the number of data domains small. Each domain represent
 
 ### How domains enable cross-functional collaboration
 
-While data domains define ownership, they don't create silos. Instead, they provide a trusted foundation for collaboration. Each domain owns the quality and meaning of its data, but makes that data available to others through well-governed interfaces – like APIs, shared data views, or curated datasets in our Enterprise Data Platform. This model supports shared analytics, integrated processes, and consistent decision-making across Water Corporation.
+While data domains define ownership, they don't create silos. Instead, they provide a trusted foundation for collaboration. Each domain owns the quality and meaning of its data, but makes that data available to others through well-governed interfaces: data contracts between producer and consumer domains, cross-catalog views in the EDAP, shared reference data in the `prod_reference` catalog, and curated data products published to the Discover marketplace. Data contracts formalise these sharing arrangements with explicit schema guarantees, quality expectations, and freshness SLAs, ensuring that consumers can rely on cross-domain data without informal dependencies.
 
 ### How does this relate to metadata?
 
@@ -524,3 +580,14 @@ Our domain model plays a foundational role in major corporate efforts. It suppor
 ### How do data domains help us?
 
 As our data environment grows in scale and complexity, the role of domains becomes even more important. They are the backbone of a federated data governance model, where responsibility is distributed but aligned under shared policies and standards. Each domain has embedded data stewards who understand the business meaning, quality expectations, and lifecycle of their data. Meanwhile, central governance ensures consistency, security, and corporate-wide coordination.
+
+---
+
+## Companion Documents
+
+| Document | Relationship |
+|---|---|
+| **Core Data Governance Roles in the Enterprise** | Defines the governance roles (Data Owner, Data Domain Steward, Technical Data Steward, etc.) that operate within each domain |
+| **Governing Data Across Source Systems and the Enterprise Data & Analytics Platform** | Describes how domain governance is enforced across source systems and EDAP |
+| **EDAP Tagging Strategy** | Defines the governed tag taxonomy including the `data_domain` tag |
+| **EDAP Access Model** | Describes how domain-aligned schemas, ABAC policies, and catalog bindings enforce domain governance |

@@ -65,7 +65,7 @@ The Analyse stage is the foundation. Get this wrong and everything downstream �
 - Start with the decision, not the data. The most common BI failure mode is building a technically correct dashboard that nobody uses because it doesn't answer the question the business actually cares about.
 - Be ruthless about scope. A focused solution that answers three critical questions well is vastly more valuable than a sprawling report that answers thirty questions poorly.
 - Validate assumptions early. Build lightweight prototypes or mockups and put them in front of users before investing in engineering work.
-- Identify sensitive data and compliance requirements (SOCI Act, PRIS Act, State Records Act, Essential Eight) early to ensure data handling aligns with regulations from the outset.
+- Identify sensitive data and compliance requirements (SOCI Act 2018 including 2024 amendments, PRIS Act 2024, Privacy Act 1988, State Records Act 2000, Essential Eight) early to ensure data handling aligns with regulations from the outset. Where the BI solution will incorporate AI copilot or NLQ capabilities, assess whether Privacy Act reform obligations around automated decision-making transparency apply.
 - Document assumptions, risks, and dependencies explicitly. Manage expectations about what the data can and cannot support.
 
 **Key Roles:** Business Analyst (requirements gathering), BI Analyst (data landscape and metric assessment), Product Owner / Sponsor (prioritisation and outcome definition).
@@ -121,7 +121,7 @@ The critical interface between BI and data engineering is the **Gold layer** of 
 **Key Activities:**
 
 - **Data Acquisition and Ingestion** – Sourcing data from internal and external systems, using the ingestion patterns defined in the Data Engineering Lifecycle (CDC, managed connectors, file-based, API-based). The BI team's role is to validate that the ingested data meets the requirements identified in the Analyse stage.
-- **Transformation and Modelling** – Building the dimensional models (star schemas, conformed dimensions), calculated metrics, and aggregations that the semantic model requires. This work is done in the data engineering pipeline (using dbt, Lakeflow Declarative Pipelines, or equivalent) and surfaced as Gold-layer tables. The BI team works closely with data engineering to ensure transformations align with business logic and metric definitions.
+- **Transformation and Modelling** – Building the dimensional models (star schemas, conformed dimensions), calculated metrics, and aggregations that the semantic model requires. This work is done in the data engineering pipeline (using dbt, Lakeflow Spark Declarative Pipelines, or equivalent) and surfaced as Gold-layer tables. The BI team works closely with data engineering to ensure transformations align with business logic and metric definitions.
 - **Semantic Layer Implementation** – Implementing the semantic model designed in the Design stage. This includes defining measures, hierarchies, relationships, row-level security, and time intelligence within the chosen semantic layer technology (Power BI Tabular model, Databricks AI/BI, or a universal semantic layer). This is where business logic is encoded as governed, reusable infrastructure.
 - **Data Quality Validation** – Validating that the data flowing into the BI environment meets quality expectations: accuracy, completeness, timeliness, and conformance to the data contract. Implement automated quality checks that run before data is exposed to consumers.
 - **Security and Access Control** – Implementing row-level security (RLS), column-level security, workspace access controls, and data classification labels to ensure that users see only the data they are authorised to access. Security must be designed into the semantic model, not layered on at the report level.
@@ -137,6 +137,13 @@ The critical interface between BI and data engineering is the **Gold layer** of 
 - Work collaboratively with data engineering. The BI team should not be building its own ETL pipelines; it should be consuming well-governed data products from the data engineering team and providing feedback on gaps or quality issues.
 - Treat the semantic layer as code: version-controlled, tested, reviewed, and promoted through environments (dev → test → prod) just like pipeline code.
 - Use **Databricks Asset Bundles (DABs)** as the CI/CD mechanism for deploying BI assets — dashboards, SQL queries, alerts, and semantic model definitions — as code. DABs enable teams to define, test, and promote BI artefacts through environments using the same infrastructure-as-code practices applied to data engineering pipelines, ensuring consistency and auditability across deployments.
+- Use **GenAI as a development accelerator.** AI coding assistants can generate DAX measures, write SQL transformations, scaffold dashboard layouts, produce documentation, and suggest optimisations — significantly accelerating BI development. However, AI-generated code must be reviewed, tested, and validated against the governed semantic model before deployment. Treat AI-assisted development as a productivity tool, not a substitute for BI expertise: the developer remains accountable for correctness, performance, and governance compliance of all code, whether human-written or AI-assisted.
+- Implement BI-specific testing practices:
+  - **Metric validation tests** — automated comparison of metric outputs against known-good values or independently calculated results. These tests verify that semantic model calculations (DAX measures, SQL metric definitions) produce correct results across edge cases (null values, date boundaries, filter combinations).
+  - **Visual regression testing** — automated screenshot comparison that detects unintended layout changes, broken visualisations, or formatting drift between releases. Tools that support this include Playwright, Chromatic, and Power BI's visual regression testing APIs.
+  - **Performance benchmarking** — establish baseline dashboard load times and query execution times, and track them over releases. Set performance SLOs (e.g. "P95 dashboard load time < 5 seconds") and fail the deployment if the new release degrades performance beyond a defined threshold.
+  - **Semantic layer unit tests** — test individual metric definitions in isolation (does "Revenue YTD" return the correct value for a known input dataset?) before testing the full semantic model. Treat the semantic layer as code with its own test suite.
+  - **Security rule testing** — verify that row-level security, column masking, and access controls produce the expected results for different user personas. Test that restricted data is not visible to unauthorised users across all consumption channels (dashboards, NLQ, API).
 - Test end-to-end before releasing to users: data quality, metric accuracy, security rules, and performance under realistic load.
 
 **Key Roles:** Data Engineer (pipeline development and Gold-layer modelling), BI Developer (semantic layer implementation), Data Architect (data architecture alignment), Data Steward (quality validation and governance).
@@ -152,6 +159,13 @@ The Visualise stage is where insight is delivered to consumers. It transforms th
 - **Dashboard Development** – Creating interactive dashboards that provide a high-level overview of key metrics and KPIs with the ability to drill down into supporting detail. Dashboards should be designed around specific decision workflows, not as generic data dumps. Every page should answer a clear question.
 
 - **Narrative and AI-Powered Analytics** – Leveraging AI copilots and narrative intelligence to complement traditional visualisations. Power BI Copilot and Databricks AI/BI Genie allow users to ask questions in natural language and receive visualisations, summaries, and explanations grounded in the semantic model. This represents a fundamental shift: the dashboard is no longer the only – or even primary – entry point for analytics. Natural language becomes an alternative interface, particularly powerful for ad-hoc questions that don't warrant a dedicated report page.
+
+- **AI Copilot Governance and Grounding** – AI copilots and NLQ interfaces (Power BI Copilot, Databricks Genie) must be grounded in the governed semantic model to deliver trustworthy answers. Without grounding, AI copilots will confidently generate plausible but incorrect results — and AI-generated wrong answers erode trust faster than no AI at all. Key governance practices:
+  - **Grounding validation:** Verify that AI copilot responses are derived from governed metric definitions and semantic model relationships, not from ad-hoc inference over raw data.
+  - **Guardrails and refusal:** Configure AI copilots to refuse or caveat answers when confidence is low, when the question falls outside the semantic model's scope, or when the data required is classified beyond the user's access level. A clear "I don't have enough information to answer that reliably" is better than a confident wrong answer.
+  - **Answer accuracy monitoring:** Establish a feedback loop where users can flag incorrect or misleading AI-generated answers. Track AI answer accuracy as a quality metric alongside traditional dashboard quality. Review flagged answers at the regular stewardship cadence.
+  - **PI and classification enforcement:** AI copilots must respect the same row-level security, column masking, and classification controls as traditional dashboards. Verify that NLQ interfaces do not expose masked or restricted data through natural language circumvention (e.g. "What is the average salary for employees in team X?" should return masked results if the user lacks PI authorisation).
+  - **Regulatory consideration:** Where AI copilot responses inform decisions that affect individuals (e.g. customer risk scoring, employee performance), Privacy Act reform may introduce obligations around automated decision-making transparency and contestability. Design AI copilot implementations to produce auditable answer provenance — the metric, the filter, the data product, and the time of query — so that AI-informed decisions can be explained and challenged.
 
 - **Report Creation** – Developing structured, paginated reports for regulatory, compliance, or operational use cases where formal, repeatable output is required. These serve a different purpose from interactive dashboards and should be designed accordingly.
 
@@ -235,17 +249,36 @@ Without a semantic layer, every BI developer defines metrics independently, lead
 
 The semantic layer is not a new concept, but its strategic importance has increased dramatically because of AI. Without governed semantics, AI copilots will confidently generate wrong answers. With a robust semantic layer, AI copilots become trustworthy, grounded tools that deliver consistent results aligned with business definitions.
 
+**Headless BI and composable analytics:** The logical extension of treating the semantic layer as shared infrastructure is **headless BI** — decoupling metric definitions from any specific BI tool and exposing them as APIs and SDKs that any consumer can call. In this model, the semantic layer becomes a governed metrics service: dashboards, AI agents, operational applications, data science notebooks, and external integrations all consume the same metric definitions through programmatic interfaces rather than tool-specific connections. This is the direction that UC Metrics, the Databricks AI/BI semantic model, and tools like dbt Semantic Layer are heading. The practical implication for design is: define metrics in a tool-agnostic, API-accessible way from the outset, so that the semantic layer can serve new consumption channels without rearchitecting.
+
 ---
 
 ### Security and Compliance
 
-Implement access controls, row-level security, data classification, encryption, and audit logging to protect sensitive information and comply with applicable regulations (SOCI Act, PRIS Act, State Records Act, Essential Eight). Security must be designed into the semantic model and enforced consistently across all consumption channels – dashboards, APIs, AI copilots, and data exports. A user should see the same data (and only the data they are authorised to see) regardless of how they access it.
+Implement access controls, row-level security, data classification, encryption, and audit logging to protect sensitive information and comply with applicable regulations (SOCI Act 2018 including 2024 SOCI Rules amendments, PRIS Act 2024, Privacy Act 1988, State Records Act 2000, Essential Eight). Security must be designed into the semantic model and enforced consistently across all consumption channels – dashboards, APIs, AI copilots, and data exports. A user should see the same data (and only the data they are authorised to see) regardless of how they access it.
+
+**AI copilots and regulatory compliance:** AI-powered analytics introduces specific security considerations. AI copilot interactions must respect the same classification controls as traditional dashboard access — NLQ interfaces must not circumvent column masking, row-level security, or access restrictions. Where AI copilot responses inform decisions affecting individuals, Privacy Act reform may require automated decision-making transparency and the ability for affected parties to request human review. Audit logging should capture AI copilot queries and responses alongside traditional dashboard access for compliance and incident investigation purposes.
 
 ---
 
 ### Data Governance
 
 Maintain the Data Catalog, ensure data quality, manage metadata (including metric definitions, lineage, and ownership), and enforce governance policies throughout the BI lifecycle. The BI team is both a consumer and a contributor to governance: consuming governed data products from the data engineering team, and contributing metric definitions, usage patterns, and quality feedback back to the governance framework. **Unity Catalog tags** provide a mechanism for classifying and discovering BI assets — dashboards, queries, semantic models, and the underlying tables they depend on. Tags enable teams to label assets by domain, sensitivity, lifecycle stage, or ownership, making it straightforward to search, audit, and apply governance policies consistently across the BI estate.
+
+---
+
+### FinOps and Cost Governance
+
+BI compute carries significant variable cost that must be actively managed. Serverless SQL Warehouses, Power BI Premium/Fabric capacity, and AI copilot usage all scale with consumption — unmanaged, costs can grow disproportionately to the value delivered.
+
+**Key practices:**
+
+- **Cost attribution by domain.** Use Unity Catalog system tables and warehouse tagging to attribute BI compute costs to business domains, teams, and individual dashboards. Make cost visible to the teams that generate it.
+- **Cost-per-query and cost-per-user tracking.** Monitor unit economics: what does it cost to serve a dashboard view, execute a Genie conversation, or run a scheduled report refresh? Identify outlier queries and optimise or redesign them.
+- **Capacity planning.** Forecast BI compute demand based on user growth, new dashboard launches, and AI copilot adoption. Right-size SQL Warehouse configurations and Power BI capacity SKUs to match actual demand, not peak-theoretical demand.
+- **Idle resource management.** Configure auto-stop policies for SQL Warehouses, review Power BI Premium capacity utilisation, and retire unused dashboards that consume scheduled refresh resources.
+- **Cost guardrails.** Set budget alerts and query cost limits to prevent runaway costs from poorly optimised queries or unexpected usage spikes.
+- **FinOps review cadence.** Include cost review in the monthly BI technical review. Track cost trends alongside usage and adoption metrics — cost should grow proportionally to value delivered, not ahead of it.
 
 ---
 
@@ -259,10 +292,24 @@ Foster continuous communication between business users, data engineers, BI devel
 
 BI solutions must be accessible to all users, including those with disabilities. For a government entity, this is both a legal obligation and a matter of equitable service delivery. Key considerations:
 
-- **WCAG 2.1 AA compliance** – Ensure that dashboards and reports meet the Web Content Accessibility Guidelines (WCAG) 2.1 at Level AA. This includes sufficient colour contrast ratios, keyboard navigability, meaningful alt text for visual elements, and logical reading order.
+- **WCAG 2.2 AA compliance** – Ensure that dashboards and reports meet the Web Content Accessibility Guidelines (WCAG) 2.2 at Level AA (published as a W3C Recommendation in October 2023, superseding WCAG 2.1). This includes sufficient colour contrast ratios, keyboard navigability, meaningful alt text for visual elements, and logical reading order. Key additions in WCAG 2.2 relevant to interactive dashboards include focus appearance requirements (2.4.11 — ensuring focused elements are clearly visible), dragging movements alternatives (2.5.7 — providing non-drag alternatives for drag-and-drop interactions such as dashboard rearrangement), and accessible authentication (3.3.8 — ensuring login flows do not rely solely on cognitive function tests).
 - **Colour-blind-safe palettes** – Design visualisations using colour palettes that are distinguishable by users with colour vision deficiencies (approximately 8% of males). Avoid relying on colour alone to convey meaning — supplement with patterns, labels, or icons. Tools like ColorBrewer and the Coblis colour blindness simulator assist in validation.
 - **Screen reader compatibility** – Structure dashboards so that screen readers can convey the key insights: use descriptive titles, provide text alternatives for charts, and ensure that data tables are properly structured with headers. Power BI's accessibility features (alt text on visuals, tab order configuration, high-contrast themes) should be configured for all production dashboards.
 - **Inclusive design reviews** – Include accessibility testing in the standard review process before go-live. Conduct testing with assistive technologies (screen readers, keyboard-only navigation) and, where possible, with users who rely on these technologies.
+
+---
+
+### Data Literacy
+
+Self-service analytics and AI copilots increase the reach of BI — but reach without literacy creates risk. Users who can access data but lack the skills to interpret it correctly will draw wrong conclusions, misread visualisations, and over-trust AI-generated answers. The BI team is increasingly the frontline for data literacy enablement.
+
+**Key practices:**
+
+- **Interpretation skills.** Train users to read visualisations correctly: understand axes, scales, aggregation levels, and the difference between correlation and causation. A bar chart showing two metrics moving together does not mean one causes the other.
+- **Critical evaluation of AI-generated answers.** Teach users to treat AI copilot responses as a starting point, not a final answer. Users should know how to verify an AI-generated metric against the underlying dashboard, understand when to question a result, and recognise when a question exceeds the AI's grounding.
+- **Statistical literacy.** For analyst and power-user personas, provide training on sampling bias, statistical significance, confidence intervals, and the limitations of small sample sizes. These concepts are essential for correct interpretation of data science model outputs surfaced through BI dashboards.
+- **Governance awareness.** Ensure users understand data classification, access policies, and their responsibilities as data consumers — particularly when working with PI-classified data or sharing insights externally.
+- **Delivery mechanisms.** Embed literacy into the BI experience: contextual help within dashboards, guided analytics experiences for new users, and short-form training integrated into onboarding. Supplement with periodic workshops, communities of practice, and domain-specific data literacy champions.
 
 ---
 
@@ -285,6 +332,8 @@ The BI discipline is in the middle of a fundamental shift. Understanding this sh
 **From backward-looking to forward-looking.** Descriptive analytics ("what happened") remains important, but the highest-value BI incorporates diagnostic ("why"), predictive ("what might happen"), and prescriptive ("what should we do") capabilities. AI-powered analytics makes this practical at scale.
 
 **From passive consumption to proactive intelligence.** The best BI systems don't wait for users to visit a dashboard. They push alerts, detect anomalies, surface unexpected patterns, and – increasingly – recommend actions. The shift from pull to push is a defining characteristic of modern BI.
+
+**From tool-centric to composable.** The semantic layer is decoupling from any single BI tool. Metrics defined once can be consumed through dashboards, AI agents, APIs, operational applications, and data science notebooks. This headless, composable model means BI teams increasingly build governed metrics services rather than reports — and the choice of consumption tool becomes a downstream decision, not an architectural one.
 
 ---
 

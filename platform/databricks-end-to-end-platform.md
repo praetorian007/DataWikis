@@ -1,12 +1,12 @@
 # Databricks End-to-End Data Platform: From Ingestion to AI-Powered BI
 
-**A Data Engineer's Guide to the Modern Databricks Stack (as at March 2026)**
+**Mark Shaw** | Principal Data Architect
 
 ---
 
 ## 1. Platform Overview
 
-The Databricks Data Intelligence Platform has consolidated around three pillars â **Lakeflow** (ingestion, transformation, orchestration), **Unity Catalog** (governance), and **AI/BI** (consumption and self-service analytics). The platform now operates as a fully integrated stack where data flows from source systems through a medallion architecture (Bronze â Silver â Gold) and surfaces to business users via AI/BI Dashboards and Genie spaces â all governed by Unity Catalog and executed on serverless compute secured by Lakeguard.
+The Databricks Data Intelligence Platform has consolidated around three pillars — **Lakeflow** (ingestion, transformation, orchestration), **Unity Catalog** (governance), and **AI/BI** (consumption and self-service analytics). The platform now operates as a fully integrated stack where data flows from source systems through a medallion architecture (Bronze → Silver → Gold) and surfaces to business users via AI/BI Dashboards and Genie spaces — all governed by Unity Catalog and executed on serverless compute secured by Lakeguard.
 
 This document traces that end-to-end journey, layer by layer, through the lens of currently GA and Public Preview features.
 
@@ -38,7 +38,7 @@ Lakeflow Connect is Databricks' native, fully-managed ingestion service. It prov
 
 **Cursor-based recovery:** On failure, connectors store the last cursor position and retry with exponential backoff. When credentials expire or an external service changes, the connector picks up from the stored position on the next successful run.
 
-**Infrastructure as Code:** Ingestion pipelines can be deployed via **Databricks Asset Bundles (DABs)** â enabling source control, code review, CI/CD, and multi-environment deployment (dev â staging â prod). Terraform support is also available, and the two approaches can be used complementarily. DABs are the primary IaC deployment model for all Databricks assets, including jobs, pipelines, notebooks, ML models, and dashboard configurations, providing a single declarative YAML definition per project.
+**Infrastructure as Code:** Ingestion pipelines can be deployed via **Databricks Asset Bundles (DABs)** — enabling source control, code review, CI/CD, and multi-environment deployment (dev → staging → prod). Terraform support is also available, and the two approaches can be used complementarily. DABs are the primary IaC deployment model for all Databricks assets, including jobs, pipelines, notebooks, ML models, and dashboard configurations, providing a single declarative YAML definition per project.
 
 ### 2.4 Landing Zone Pattern
 
@@ -60,7 +60,7 @@ AS SELECT * FROM cloud_files(
 
 ### 3.1 What SDP Is
 
-Lakeflow Spark Declarative Pipelines (SDP) â the evolution of Delta Live Tables (DLT) â is a declarative framework for building batch and streaming ETL pipelines in SQL or Python. You declare *what* datasets should exist and *how* they relate; SDP handles dependency resolution, incremental processing, compute autoscaling, retry logic, and data quality enforcement.
+Lakeflow Spark Declarative Pipelines (SDP) — the evolution of Delta Live Tables (DLT) — is a declarative framework for building batch and streaming ETL pipelines in SQL or Python. You declare *what* datasets should exist and *how* they relate; SDP handles dependency resolution, incremental processing, compute autoscaling, retry logic, and data quality enforcement.
 
 SDP is also available as an open-source component in Apache Spark 4.1+ (Spark Declarative Pipelines), with the Databricks-managed version extending this with performance optimisations, serverless compute, and tight Unity Catalog integration.
 
@@ -74,7 +74,7 @@ SDP is also available as an open-source component in Apache Spark 4.1+ (Spark De
 
 ### 3.3 The Medallion Architecture in SDP
 
-**Bronze (Raw):** Streaming tables ingesting from Lakeflow Connect or Auto Loader. Data is stored as-is with append-only semantics. Schema enforcement is minimal â the goal is a faithful copy of the source.
+**Bronze (Raw):** Streaming tables ingesting from Lakeflow Connect or Auto Loader. Data is stored as-is with append-only semantics. Schema enforcement is minimal — the goal is a faithful copy of the source.
 
 ```sql
 -- Bronze: raw CDC events from SQL Server via Lakeflow Connect
@@ -139,7 +139,7 @@ Expectation metrics (rows passed, failed, dropped) are written to the pipeline e
 
 ### 4.1 The Three-Level Namespace
 
-All data assets are addressed as `catalog.schema.object`. The catalog is the primary unit of data isolation â commonly aligned to environments (e.g., `dev_bronze`, `prod_silver`), organisational units, or data domains. Catalogs can be organised by environment, by domain, by medallion layer, or by a combination of these axes. See the companion **EDAP Access Model** document for Water Corporation's specific domain-based catalog approach (`<env>_<domain>`).
+All data assets are addressed as `catalog.schema.object`. The catalog is the primary unit of data isolation — commonly aligned to environments (e.g., `dev_bronze`, `prod_silver`), organisational units, or data domains. Catalogs can be organised by environment, by domain, by medallion layer, or by a combination of these axes. See the companion **EDAP Access Model** document for Water Corporation's specific layer-based catalog approach (`<env>_<layer>`, e.g. `prod_bronze`, `prod_silver`, `prod_gold`).
 
 **Object types governed:** Tables (managed and external), views, materialized views, streaming tables, volumes (structured and unstructured files), ML models, functions (UDFs), connections, metrics, and AI agents. **Unity Catalog Volumes** are the managed replacement for the legacy DBFS root and mount points. Volumes provide governed, access-controlled storage for unstructured data (images, PDFs, audio, video, model artefacts) and are essential for applying the same governance framework to file-based assets as to tabular data.
 
@@ -153,7 +153,7 @@ Unity Catalog provides a hierarchical, ANSI SQL-based privilege model. Key mecha
 
 ### 4.3 Governed Tags and Classification
 
-Tags are first-class metadata objects in Unity Catalog. You can apply tags at catalog, schema, table, and column levels. Tags integrate with ABAC policies for dynamic access control. Use cases include sensitivity classification, regulatory alignment, data domain assignment, and lifecycle management.
+Tags are first-class metadata objects in Unity Catalog. You can apply tags at catalog, schema, table, and column levels. Tags integrate with ABAC policies for dynamic access control. Use cases include sensitivity classification, regulatory alignment, data domain assignment, lifecycle management, and AI/ML asset governance. The companion **EDAP Tagging Strategy** defines Water Corporation's four-layer tag taxonomy — including `waicp_classification`, `pi_contained`, `pi_type`, `pi_lawful_basis`, `regulatory_scope`, `sensitivity_type`, `access_model`, `masking_required`, `data_domain`, `soci_critical`, `quality_tier`, `model_risk_tier`, and `ai_governance_level` — with allowed values, inheritance rules, and change management procedures.
 
 ### 4.4 Lineage
 
@@ -167,15 +167,37 @@ Unity Catalog automatically captures column-level lineage across all queries exe
 
 **UC Metrics (Public Preview):** Business metrics defined as first-class catalog objects. Define a metric once in Unity Catalog and consume it across AI/BI Dashboards, Genie spaces, notebooks, SQL, and Lakeflow Jobs. Upcoming integrations will extend to Tableau, Hex, Sigma, ThoughtSpot, Omni, and observability tools like Anomalo and Monte Carlo.
 
-### 4.6 Iceberg Interoperability
+### 4.6 Lakehouse Federation
 
-Unity Catalog now provides full support for the Iceberg REST Catalog API â external engines can both read (GA) and write (Public Preview) to UC-managed Iceberg tables. Iceberg managed tables deliver liquid clustering, predictive optimisation, and full integration with Databricks and external engines (Trino, Snowflake, Amazon EMR). Iceberg catalog federation allows querying Iceberg tables in AWS Glue, Hive Metastore, and Snowflake without copying data.
+Lakehouse Federation enables Unity Catalog to query external data sources — SQL Server, PostgreSQL, MySQL, Snowflake, BigQuery, Amazon Redshift, and others — without copying data into the lakehouse. Federation uses **connections** (Unity Catalog objects that store credentials and endpoint details) and **foreign catalogs** (read-only catalog mappings that expose external schemas and tables within the three-level namespace).
 
-### 4.7 Delta Sharing
+Federated tables appear in Catalog Explorer, participate in lineage tracking, and can be governed with tags and access controls like any Unity Catalog asset. This enables use cases such as joining lakehouse Gold tables with operational system data for real-time enrichment, querying data warehouse tables during migration without full replication, and building cross-platform analytical views — all while maintaining a single governance plane.
+
+See the companion **Domain Governance Across Systems** document for the governance process applied to federated data sources, including the `_federated` naming suffix convention defined in the **EDAP Tagging Strategy**.
+
+### 4.7 Iceberg Interoperability
+
+Unity Catalog now provides full support for the Iceberg REST Catalog API — external engines can both read (GA) and write (Public Preview) to UC-managed Iceberg tables. Iceberg managed tables deliver liquid clustering, predictive optimisation, and full integration with Databricks and external engines (Trino, Snowflake, Amazon EMR). Iceberg catalog federation allows querying Iceberg tables in AWS Glue, Hive Metastore, and Snowflake without copying data.
+
+### 4.8 Delta Sharing
 
 Delta Sharing provides open, cross-platform data sharing with governance. Streaming tables and materialized views can now be shared (GA as of mid-2025). ABAC-secured tables can be included in shares. External Iceberg clients (Snowflake, Trino, Flink, Spark) can query shared Delta tables with zero-copy access.
 
-### 4.8 System Tables
+For the six-step governance process applied to external Delta Sharing at Water Corporation, see the companion **Domain Governance Across Systems** document.
+
+### 4.9 Clean Rooms
+
+Databricks Clean Rooms (GA) enable privacy-preserving collaboration on shared data without exposing raw records. Participants define their own tables and the approved computations (aggregations, joins, ML training) that can run against them — only the computation results are returned, never the underlying data. Clean Rooms are governed by Unity Catalog, use serverless compute, and support both SQL and notebook-based collaborations. This capability is relevant for regulatory scenarios (sharing anonymised operational data with government agencies), cross-organisation analytics (joint analysis with partner utilities or suppliers), and any use case where data must be analysed collaboratively without physical data movement or exposure.
+
+### 4.10 Predictive Optimization
+
+Predictive Optimization (GA) automatically manages table maintenance operations — `OPTIMIZE` (file compaction and liquid clustering), `VACUUM` (removal of unreferenced files), and `ANALYZE TABLE` (statistics collection) — for managed tables in Unity Catalog. The service monitors table usage patterns and file layout health, scheduling maintenance operations when they will deliver the most benefit. This eliminates the operational overhead of manual table maintenance, reduces storage costs through timely cleanup, and improves query performance through proactive optimisation — all without requiring user intervention or scheduling.
+
+### 4.11 Marketplace
+
+Databricks Marketplace provides a discovery and distribution platform for shared data products, notebooks, ML models, Databricks Apps, and solution accelerators. Providers can publish assets for open or restricted access; consumers can discover and install them directly into their Unity Catalog. For enterprise use, Marketplace supports private exchanges — enabling internal teams to publish governed data products for discovery and consumption by other teams within the organisation, complementing the data product lifecycle described in the companion **Data Engineering Lifecycle**.
+
+### 4.12 System Tables
 
 Databricks exposes operational metadata as queryable Delta tables under the `system` catalog, covering audit logs, billing, compute usage, lineage, job runs, pipeline metrics, and network access events. These are essential for building governance dashboards, cost attribution, and compliance reporting.
 
@@ -189,7 +211,7 @@ Serverless compute is GA for notebooks, jobs, SDP pipelines, and SQL warehouses 
 
 Serverless compute requires Unity Catalog for data access. Workloads must be compatible with Databricks Runtime 14.3+ and standard access mode.
 
-New Databricks accounts created after December 2025 default to Unity Catalog-only â DBFS root, mounts, Hive Metastore, and no-isolation shared compute are disabled.
+New Databricks accounts created after December 2025 default to Unity Catalog-only — DBFS root, mounts, Hive Metastore, and no-isolation shared compute are disabled.
 
 ### 5.2 Lakeguard
 
@@ -233,7 +255,7 @@ Job run history, task-level execution times, and status are visible in the UI. S
 
 ### 6.4 Integration with Lakeflow Connect
 
-Ingestion pipelines created via Lakeflow Connect are automatically orchestrated as tasks within Lakeflow Jobs. You can add transformation, quality check, and downstream refresh tasks to the same job â creating a single end-to-end pipeline from source to Gold.
+Ingestion pipelines created via Lakeflow Connect are automatically orchestrated as tasks within Lakeflow Jobs. You can add transformation, quality check, and downstream refresh tasks to the same job — creating a single end-to-end pipeline from source to Gold.
 
 ---
 
@@ -265,16 +287,16 @@ AI/BI Dashboards are the native BI experience in Databricks, tightly integrated 
 - **Visualisation types:** Bar, line, area, scatter, pie, heatmap, funnel, waterfall, histogram, pivot table (with drill-through and hierarchies), point map, counter, and table widgets.
 - **Cross-filtering:** Click a data point in one widget to filter others.
 - **Parameters and filters:** Global and page-level filters, date range parameters with "All" support, multi-select, and DD-MM-YYYY date formatting.
-- **Embedding:** GA for internal users; secure embedding for external users (customers, partners) via OAuth and service principal authentication â no Databricks account required for viewers.
+- **Embedding:** GA for internal users; secure embedding for external users (customers, partners) via OAuth and service principal authentication — no Databricks account required for viewers.
 - **Subscriptions:** Scheduled snapshots delivered to email, Slack channels, or Microsoft Teams channels (Public Preview), with PNG image preview, direct link, and PDF attachment.
-- **Genie Code for authoring (Public Preview):** Use natural language prompts to automate multi-step dashboard creation â datasets, visualisations, layouts, and filters.
+- **Genie Code for authoring (Public Preview):** Use natural language prompts to automate multi-step dashboard creation — datasets, visualisations, layouts, and filters.
 - **Custom fonts and workspace-level colour palettes.**
 
 ### 8.2 AI/BI Genie (GA)
 
 Genie is the conversational analytics layer. Business users ask questions in natural language and receive answers as text summaries, tables, and visualisations.
 
-**Architecture:** Each Genie space is backed by Unity Catalog tables and/or metric views. Analysts curate the space by adding tables, providing instructions, sample SQL, and example questions. Genie generates SQL behind the scenes, runs it against a SQL Warehouse, and returns results â all governed by the user's Unity Catalog permissions.
+**Architecture:** Each Genie space is backed by Unity Catalog tables and/or metric views. Analysts curate the space by adding tables, providing instructions, sample SQL, and example questions. Genie generates SQL behind the scenes, runs it against a SQL Warehouse, and returns results — all governed by the user's Unity Catalog permissions.
 
 **Key capabilities:**
 
@@ -284,8 +306,8 @@ Genie is the conversational analytics layer. Business users ask questions in nat
 - **Agent mode (Beta):** Parallel query execution and inline thinking traces for faster, more transparent results.
 - **Thinking steps:** Each response shows how the prompt was interpreted and which tables/SQL were used.
 - **Benchmarks:** Space editors can evaluate Genie's answer accuracy with a built-in benchmarking framework.
-- **Embedded credentials:** Genie queries run using the publishing user's warehouse permissions when dashboards are published with embedded credentials â including in externally embedded dashboards.
-- **Genie API (GA):** `CreateSpace`, `UpdateSpace`, `GetSpace`, `ListSpaces`, `TrashSpace` â enabling integration into Slack, Microsoft Teams, or custom applications.
+- **Embedded credentials:** Genie queries run using the publishing user's warehouse permissions when dashboards are published with embedded credentials — including in externally embedded dashboards.
+- **Genie API (GA):** `CreateSpace`, `UpdateSpace`, `GetSpace`, `ListSpaces`, `TrashSpace` — enabling integration into Slack, Microsoft Teams, or custom applications.
 - **Automatic JOIN relationships:** The API now auto-creates JOIN relationships based on primary and foreign key metadata in Unity Catalog.
 
 ### 8.3 Databricks Apps
@@ -302,7 +324,7 @@ To get Genie working effectively against your Gold layer:
 
 1. **Register Gold tables in Unity Catalog** with clear, descriptive table and column names. Apply comments/descriptions to all columns.
 2. **Define metric views** for your core KPIs, centralising business logic so Genie (and dashboards) produce consistent answers.
-3. **Add semantic metadata** to metric views (YAML spec v1.1+, DBR 17.2+) â display names, display formats, and descriptions that help Genie interpret the data correctly.
+3. **Add semantic metadata** to metric views (YAML spec v1.1+, DBR 17.2+) — display names, display formats, and descriptions that help Genie interpret the data correctly.
 4. **Create a Genie space**, add your Gold tables and metric views, and provide curated instructions: common questions, sample SQL, domain-specific terminology, and any nuances about filters or date ranges.
 5. **Benchmark and iterate.** Use the built-in benchmarking framework to evaluate answer quality and the feedback workflow to correct and regenerate incorrect responses.
 
@@ -328,7 +350,21 @@ Vector Search provides a serverless, managed vector database for retrieval-augme
 
 The Databricks AI Agent Framework provides tools for building, evaluating, and deploying compound AI systems (agents) that combine LLMs with tools such as Unity Catalog functions, retrieval, and code execution. Agents can be logged, versioned, and served using Model Serving endpoints. The Agent Evaluation framework enables systematic quality assessment before production deployment.
 
-### 9.5 MLflow Integration
+### 9.5 AI Gateway
+
+AI Gateway (GA) provides a unified API layer for managing access to foundation models — both Databricks-hosted models and external providers (OpenAI, Anthropic, Azure OpenAI, Google, Cohere, and others). Key capabilities:
+
+- **Provider routing and fallback:** Configure primary and fallback model providers per endpoint, enabling resilience and cost optimisation without application code changes.
+- **Rate limiting and token budgets:** Enforce per-endpoint, per-user, or per-team rate limits and token consumption budgets — essential for controlling GenAI costs.
+- **Guardrails:** Apply input/output guardrails (content filtering, PII detection, topic restrictions) at the gateway level, enforced consistently across all consuming applications.
+- **Usage tracking and audit:** All requests and responses are logged, providing a single audit trail for compliance, cost attribution, and usage analysis. Usage data flows to system tables for integration with FinOps dashboards.
+- **Centralised governance:** AI Gateway is the enforcement point for GenAI access policies — controlling which models are available to which teams, under what conditions, with what guardrails.
+
+### 9.6 Online Tables
+
+Online Tables (GA) provide low-latency, high-throughput key-value serving for ML feature lookups and real-time applications. An Online Table is a read-only, automatically synchronised copy of a Delta table optimised for point lookups by primary key. Online Tables are Unity Catalog objects, inheriting access controls, lineage, and tagging. They complete the feature serving story: features are defined and computed as standard Delta tables (Section 9.2), and Online Tables make those same features available for millisecond-latency serving at inference time — eliminating training-serving skew without requiring a separate feature serving infrastructure.
+
+### 9.7 MLflow Integration
 
 MLflow is deeply integrated into the Databricks platform for experiment tracking, model versioning, and the model registry (via Unity Catalog). Models registered in Unity Catalog carry lineage, governed tags, and access controls — enabling the same governance framework used for data to extend to AI assets.
 
@@ -337,66 +373,78 @@ MLflow is deeply integrated into the Databricks platform for experiment tracking
 ## 10. Putting It All Together: End-to-End Data Flow
 
 ```
-âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-â                        SOURCE SYSTEMS                               â
-â  (SQL Server, Salesforce, Kafka, S3/ADLS/GCS, SharePoint, etc.)    â
-ââââââââââââââââââââââââââââââââ¬âââââââââââââââââââââââââââââââââââââââ
-                               â
+┌─────────────────────────────────────────────────────────────────────┐
+│                        SOURCE SYSTEMS                               │
+│  (SQL Server, Salesforce, Kafka, S3/ADLS/GCS, SharePoint, etc.)    │
+└──────────────────────────────┬──────────────────────────────────────┘
+                               │
                     Lakeflow Connect / Auto Loader
                     (Serverless, CDC, Incremental)
-                               â
-                               â¼
-âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-â                     BRONZE (Raw / Landing)                          â
-â  Streaming Tables in Unity Catalog                                  â
-â  prod_bronze.source_system.table_name                               â
-â  â¢ Append-only, schema-on-read                                      â
-â  â¢ Lakeflow Connect manages cursor, retry, scheduling               â
-ââââââââââââââââââââââââââââââââ¬âââââââââââââââââââââââââââââââââââââââ
-                               â
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                     BRONZE (Raw / Landing)                          │
+│  Streaming Tables in Unity Catalog                                  │
+│  prod_bronze.source_system.table_name                               │
+│  • Append-only, schema-on-read                                      │
+│  • Lakeflow Connect manages cursor, retry, scheduling               │
+└──────────────────────────────┬──────────────────────────────────────┘
+                               │
                     SDP Pipeline (SQL/Python)
                     AUTO CDC INTO / Expectations
-                               â
-                               â¼
-âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-â                     SILVER (Cleaned / Conformed)                    â
-â  Streaming Tables + Materialized Views in Unity Catalog             â
-â  prod_silver.domain.entity                                          â
-â  â¢ SCD Type 1/2, deduplication, type casting                        â
-â  â¢ DQ expectations (EXPECT OR DROP / FAIL)                          â
-â  â¢ Column-level lineage captured automatically                      â
-ââââââââââââââââââââââââââââââââ¬âââââââââââââââââââââââââââââââââââââââ
-                               â
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                     SILVER (Cleaned / Conformed)                    │
+│  Streaming Tables + Materialized Views in Unity Catalog             │
+│  prod_silver.domain.entity                                          │
+│  • SCD Type 1/2, deduplication, type casting                        │
+│  • DQ expectations (EXPECT OR DROP / FAIL)                          │
+│  • Column-level lineage captured automatically                      │
+└──────────────────────────────┬──────────────────────────────────────┘
+                               │
                     SDP Pipeline (SQL/Python)
                     Aggregations, Dimensional Models
-                               â
-                               â¼
-âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-â                     GOLD (Business-Ready)                           â
-â  Materialized Views in Unity Catalog                                â
-â  prod_gold.domain.metric_or_dim                                     â
-â  â¢ Dimensional models, KPI aggregations                             â
-â  â¢ UC Metrics defined for core business measures                    â
-â  â¢ Semantic metadata for Genie consumption                          â
-ââââââââââââââââââââââââââââââââ¬âââââââââââââââââââââââââââââââââââââââ
-                               â
-              ââââââââââââââââââ¼âââââââââââââââââ
-              â                â                â
-              â¼                â¼                â¼
-     AI/BI Dashboards    Genie Spaces     Delta Sharing
-     (SQL Warehouses)    (NL Analytics)   (Cross-Org)
-              â                â
-              âââââââââ¬âââââââââ
-                      â¼
-              Databricks One
-              (Business User Portal)
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                     GOLD (Business-Ready)                           │
+│  Materialized Views + Feature Tables in Unity Catalog               │
+│  prod_gold.domain.metric_or_dim                                     │
+│  • Dimensional models, KPI aggregations                             │
+│  • UC Metrics defined for core business measures                    │
+│  • Semantic metadata for Genie consumption                          │
+│  • Feature tables for ML consumption                                │
+└──────────────────────────────┬──────────────────────────────────────┘
+                               │
+         ┌─────────────────────┼─────────────────────┐
+         │                     │                     │
+         ▼                     ▼                     ▼
+┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────┐
+│  BI Consumption  │  │  AI/ML Path      │  │  Sharing & Collab   │
+│                 │  │                 │  │                     │
+│ AI/BI Dashboards│  │ Feature Eng.    │  │ Delta Sharing       │
+│ Genie Spaces    │  │ Model Training  │  │ Clean Rooms         │
+│ Databricks Apps │  │ MLflow Registry │  │ Marketplace         │
+│                 │  │ Model Serving   │  │ Lakehouse Federation│
+│                 │  │ Online Tables   │  │                     │
+│                 │  │ Vector Search   │  │                     │
+│                 │  │ Agent Framework │  │                     │
+│                 │  │ AI Gateway      │  │                     │
+└────────┬────────┘  └─────────────────┘  └─────────────────────┘
+         │
+         ▼
+  Databricks One
+  (Business User Portal)
 ```
 
-**Governance throughout:** Unity Catalog governs every layer â access control (ACLs, ABAC, row filters, column masks), tagging, lineage, audit logging, and data quality monitoring. Tags applied at Bronze propagate through lineage; ABAC policies enforce access dynamically at query time.
+**Governance throughout:** Unity Catalog governs every layer — access control (ACLs, ABAC, row filters, column masks), tagging, lineage, audit logging, and data quality monitoring. Tags applied at Bronze propagate through lineage; ABAC policies enforce access dynamically at query time. See the companion **EDAP Tagging Strategy** for the full governed tag taxonomy applied across all layers.
 
-**Orchestration throughout:** Lakeflow Jobs ties the entire pipeline together as a single DAG â ingestion task â Bronze SDP pipeline â Silver SDP pipeline â Gold SDP pipeline â dashboard refresh. Table-update triggers enable event-driven execution across layers.
+**Data contracts:** The platform's data contract capability is built from the combination of SDP expectations (quality guarantees), UC Metrics (semantic business definitions), governed tags (classification and sensitivity), and system tables (freshness and completeness monitoring). Together, these provide the machine-enforceable interface between data producers and consumers described in the companion **Domain Governance Across Systems** document.
 
-**Compute throughout:** Serverless compute (secured by Lakeguard) is the default for SDP pipelines, SQL warehouses, notebooks, and jobs â providing seconds-level start-up, automatic scaling, and unified security enforcement.
+**Orchestration throughout:** Lakeflow Jobs ties the entire pipeline together as a single DAG — ingestion task → Bronze SDP pipeline → Silver SDP pipeline → Gold SDP pipeline → dashboard refresh. Table-update triggers enable event-driven execution across layers.
+
+**Compute throughout:** Serverless compute (secured by Lakeguard) is the default for SDP pipelines, SQL warehouses, notebooks, and jobs — providing seconds-level start-up, automatic scaling, and unified security enforcement.
 
 ---
 
@@ -407,13 +455,17 @@ MLflow is deeply integrated into the Databricks platform for experiment tracking
 | Lakeflow Connect (Salesforce, Workday, SQL Server, GA4, ServiceNow, SharePoint, NetSuite) | GA |
 | Lakeflow Connect (PostgreSQL, MySQL) | Public Preview |
 | Lakeflow Connect (Confluence, SFTP, MongoDB, DB2, DynamoDB) | Preview / Roadmap |
-| Spark Declarative Pipelines (SDP) â serverless | GA |
+| Spark Declarative Pipelines (SDP) — serverless | GA |
 | SDP in open-source Apache Spark 4.1 | GA |
 | Unity Catalog ABAC | Public Preview (account-level) |
 | Unity Catalog Metrics | Public Preview |
+| Lakehouse Federation | GA |
 | Iceberg REST Catalog API (read) | GA |
 | Iceberg REST Catalog API (write) | Public Preview |
 | Iceberg managed tables | Public Preview |
+| Predictive Optimization | GA |
+| Clean Rooms | GA |
+| Marketplace | GA |
 | AI/BI Dashboards | GA |
 | AI/BI Genie | GA |
 | Genie Research Agent / Agent Mode | Beta |
@@ -422,21 +474,46 @@ MLflow is deeply integrated into the Databricks platform for experiment tracking
 | Dashboard subscriptions to Teams | Public Preview |
 | Data Quality Monitoring (anomaly detection) | GA |
 | Lakeguard (shared/serverless compute isolation) | GA |
+| AI Gateway | GA |
+| Online Tables | GA |
 | Delta Sharing for Iceberg clients | Preview |
 | Legacy features disabled for new accounts (Dec 2025+) | Enforced |
 
 ---
 
-## 12. Key References
+## 12. Companion Documents
+
+This platform capabilities document is part of a broader wiki collection. The following companion documents describe how these platform capabilities are applied within Water Corporation's enterprise context:
+
+| Document | Relationship |
+|---|---|
+| **EDAP Access Model** | Defines the layer-based catalog structure (`<env>_<layer>`) and access control patterns built on Unity Catalog |
+| **Medallion Architecture** | Details the zone decomposition within each medallion layer and the data flow conventions |
+| **Enterprise Data Models** | Describes the dimensional and entity models that populate the Gold layer |
+| **EDAP Tagging Strategy** | Defines the four-layer governed tag taxonomy applied to all Unity Catalog assets |
+| **Domain Governance Across Systems** | Three-layer governance architecture spanning Unity Catalog, Alation, and organisational process — includes data contracts, Delta Sharing governance, and Lakehouse Federation governance |
+| **Data Engineering Lifecycle** | Lifecycle framework for building and operating data pipelines on this platform |
+| **Data Science Lifecycle** | Lifecycle framework for ML/AI development using Mosaic AI capabilities |
+| **BI Lifecycle** | Lifecycle framework for analytics and reporting using AI/BI Dashboards and Genie |
+| **Data Governance Lifecycle** | End-to-end governance lifecycle from classification through compliance |
+
+---
+
+## 13. Key References
 
 - [Lakeflow Connect Documentation](https://docs.databricks.com/aws/en/ingestion/lakeflow-connect/)
 - [Spark Declarative Pipelines](https://docs.databricks.com/aws/en/ldp/)
 - [Unity Catalog](https://docs.databricks.com/aws/en/data-governance/unity-catalog/)
+- [Lakehouse Federation](https://docs.databricks.com/aws/en/query-federation/)
 - [AI/BI Dashboards and Genie](https://docs.databricks.com/aws/en/ai-bi/)
+- [Mosaic AI](https://docs.databricks.com/aws/en/machine-learning/)
+- [AI Gateway](https://docs.databricks.com/aws/en/ai-gateway/)
 - [Data Quality Monitoring](https://docs.databricks.com/aws/en/data-quality-monitoring/)
 - [Lakeguard](https://docs.databricks.com/aws/en/compute/lakeguard)
 - [Lakeflow Jobs](https://docs.databricks.com/aws/en/jobs)
 - [Delta Sharing](https://docs.databricks.com/aws/en/delta-sharing/)
+- [Clean Rooms](https://docs.databricks.com/aws/en/clean-rooms/)
+- [Marketplace](https://docs.databricks.com/aws/en/marketplace/)
 
 ---
 

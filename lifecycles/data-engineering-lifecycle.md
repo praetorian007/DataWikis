@@ -10,7 +10,7 @@ The data engineering lifecycle is a framework for understanding how data flows f
 
 This document outlines the key stages, disciplines, and contemporary practices involved in the data engineering lifecycle within an enterprise context. It is designed to complement the Business Intelligence Lifecycle and the Data Science Lifecycle, not duplicate them: where data engineering is concerned with getting data *right*, BI is concerned with getting data *used*, and data science is concerned with getting data to *learn*.
 
-This document draws on the lifecycle framework popularised by Joe Reis and Matt Housley in *Fundamentals of Data Engineering* (O'Reilly, 2022), adapted and extended for our enterprise context. The framework identifies five core stages – **Generation, Ingestion, Storage, Transformation, and Serving** – supported by a set of cross-cutting disciplines (termed "undercurrents") that run through every stage: **Security, Data Management, DataOps, Data Architecture, Orchestration, Software Engineering, and Collaboration**.
+This document draws on the lifecycle framework popularised by Joe Reis and Matt Housley in *Fundamentals of Data Engineering* (O'Reilly, 2nd edition 2025), adapted and extended for our enterprise context. The framework identifies five core stages – **Generation, Ingestion, Storage, Transformation, and Serving** – supported by a set of cross-cutting disciplines (termed "undercurrents") that run through every stage: **Security, Data Management, DataOps, Data Architecture, Orchestration, Software Engineering, and Collaboration**.
 
 The lifecycle is not strictly linear. Storage, for example, is touched at every stage. Transformation may occur during ingestion or at the point of serving. The value of the framework lies in providing a shared mental model for how we plan, build, and operate our data systems – regardless of whether those systems process ten rows or ten billion.
 
@@ -143,9 +143,13 @@ Schema-on-write enforces structure at the point of writing, ensuring consistency
 
 Decoupling compute from storage is a defining principle of modern data architecture. It allows each to scale independently – provision more compute for heavy transformation workloads without paying for additional storage, and vice versa. Object storage provides high durability and availability at low cost, while compute clusters can be spun up on demand and terminated when idle. This separation is fundamental to both cost optimisation (FinOps) and workload isolation.
 
+**Lakehouse Federation:**
+
+Unity Catalog supports **federated queries** across external data sources (PostgreSQL, MySQL, SQL Server, and other JDBC-connected systems), enabling the EDAP to query source system data in place without ingestion. This changes the architecture for certain use cases: ad-hoc governance validation, cross-referencing source system state against EDAP-held data, and accessing data that must remain in the source system for regulatory reasons. Federated queries are governed through Unity Catalog — the same ABAC policies, governed tags, and audit logging apply as for native tables. Federation complements the medallion architecture by providing a governed read path to source systems; it does not replace ingestion for analytics workloads where performance, transformation, and historical tracking are required.
+
 **Storage Lifecycle and Retention:**
 
-Not all data has equal access requirements or business value over time. Effective storage management involves tiering data based on access patterns (hot, warm, cold, archive), implementing automated lifecycle policies to transition data between tiers, and defining clear retention and deletion policies that comply with regulatory requirements (SOCI Act, PRIS Act, State Records Act) while controlling costs.
+Not all data has equal access requirements or business value over time. Effective storage management involves tiering data based on access patterns (hot, warm, cold, archive), implementing automated lifecycle policies to transition data between tiers, and defining clear retention and deletion policies that comply with regulatory requirements (SOCI Act 2018, PRIS Act 2024, State Records Act 2000) while controlling costs.
 
 **Guidance:**
 
@@ -154,7 +158,7 @@ Not all data has equal access requirements or business value over time. Effectiv
 - Use open table formats (Delta Lake, Iceberg) for ACID transactions, time travel, and schema evolution. Enable UniForm where multi-engine interoperability is required.
 - Implement **continuous table maintenance**: compaction, vacuum/snapshot expiration, and file sizing optimisation should be automated, not left to ad-hoc manual intervention. Databricks' predictive optimisation and Iceberg's automatic compaction are examples of the shift toward autonomous table management.
 - Use **liquid clustering** (Delta Lake) or **hidden partitioning with sort orders** (Iceberg) to optimise query performance without the brittleness and maintenance overhead of traditional Hive-style partitioning.
-- Define and enforce data retention and archival policies aligned with regulatory obligations (SOCI Act, PRIS Act, State Records Act).
+- Define and enforce data retention and archival policies aligned with regulatory obligations (SOCI Act 2018 including 2024 SOCI Rules amendments, PRIS Act 2024, Privacy Act 1988, State Records Act 2000).
 - Manage schema evolution carefully – changes to Silver/Gold schemas should follow a governed process enforced by data contracts.
 - Continuously monitor storage utilisation and costs; implement FinOps practices including storage tier optimisation, lifecycle policies, and chargeback/showback for domain teams.
 - Ensure data is securely and verifiably deleted when retention periods expire – this includes both the data files and any associated metadata, snapshots, and audit records as required by regulation.
@@ -186,7 +190,7 @@ The enterprise bus matrix and conformed dimensions remain essential tools for co
 **SQL-Based vs. Code-Based Transformations:**
 
 - **SQL-based** – Using SQL to transform data within the lakehouse. Tools like **dbt** (Data Build Tool) have become the industry standard for managing SQL-based transformations with modularity, version control, testing, and documentation built in. SQL remains the most widely understood data language and should be the default where it suffices.
-- **Code-based** – Using Python, Scala, or Spark for transformations that exceed SQL's capabilities: complex business logic, ML feature engineering, unstructured data processing, or custom algorithms. **Databricks Lakeflow Declarative Pipelines** (formerly Delta Live Tables; also referred to as Spark Declarative Pipelines or SDP) provide a structured, managed framework for both SQL and Python-based transformation pipelines with built-in quality expectations, lineage, and monitoring.
+- **Code-based** – Using Python, Scala, or Spark for transformations that exceed SQL's capabilities: complex business logic, ML feature engineering, unstructured data processing, or custom algorithms. **Databricks Lakeflow Spark Declarative Pipelines** (formerly Delta Live Tables; also referred to as Spark Declarative Pipelines or SDP) provide a structured, managed framework for both SQL and Python-based transformation pipelines with built-in quality expectations, lineage, and monitoring.
 - **Batch vs. Streaming** – Batch transformations process data at scheduled intervals; streaming transformations process data continuously as it arrives. Modern frameworks increasingly unify these paradigms – conceptually, batch is just streaming with a bounded window. Prefer streaming where the use case demands low latency; use batch where periodic updates suffice.
 
 **The Semantic / Metrics Layer:**
@@ -204,7 +208,7 @@ AI coding assistants (GitHub Copilot, Databricks Assistant, Claude) are increasi
 **Guidance:**
 
 - Design modular, reusable, testable transformation logic. Treat transformations as software.
-- Use declarative pipeline frameworks (dbt, Lakeflow Declarative Pipelines) to define transformations as code.
+- Use declarative pipeline frameworks (dbt, Lakeflow Spark Declarative Pipelines) to define transformations as code.
 - Implement data quality expectations (assertions/checks) within transformation pipelines – not as a separate afterthought.
 - Use dimensional modelling (Kimball) as the default for Gold-layer analytical models. Consider Data Vault for complex integration at the Silver layer.
 - Maintain conformed dimensions and an enterprise bus matrix to ensure cross-domain consistency.
@@ -235,10 +239,23 @@ A data product is a curated, documented, trustworthy, and discoverable unit of d
 - **Operational Analytics** – Real-time or near-real-time data supporting day-to-day operations: monitoring, anomaly detection, alerting, process optimisation. Often served via streaming pipelines or materialised views with low-latency refresh.
 - **Machine Learning** – Feature stores and training datasets serving ML model development and inference. Requires clean, well-structured, and reproducible data with point-in-time correctness.
 - **AI Agents and LLM Applications** – A rapidly emerging consumption pattern. AI agents and retrieval-augmented generation (RAG) systems need data that is not just clean but richly contextualised: semantic descriptions, quality scores, freshness indicators, and relationship metadata that allow autonomous systems to discover, evaluate, and reason over enterprise data without human mediation. This drives new requirements for machine-readable metadata, knowledge graphs, and vector/embedding stores alongside traditional analytical models. On the Databricks platform, ML and AI capabilities are delivered through **Mosaic AI** (Model Serving, Feature Engineering, Vector Search, Agent Framework) – the data engineering serving layer provides the governed, quality-assured foundation upon which these capabilities are built. The Data Science Lifecycle covers Mosaic AI in depth.
+
+  **AI agent governance:** AI agents that access data within the EDAP must authenticate via dedicated service principals with least-privilege access, scoped to the minimum data required for their function. Agents are governed by the same ABAC policies, governed tags, and row/column security as human users — they do not receive blanket access. Agent actions that modify data, trigger workflows, or generate outputs consumed by humans must produce an audit trail traceable to the agent's service principal and the authorising domain owner. Data engineers building serving layers for AI agents must design for these governance requirements from the outset. The companion *Domain Governance Across Systems* document (section 8.4) defines AI agent governance in detail.
 - **Reverse ETL** – Pushing processed, enriched data back into operational systems (CRM, ERP, marketing automation) so that data-driven insights are embedded directly into business workflows. An increasingly important pattern as organisations seek to operationalise their analytics.
-- **Data Sharing** – Governed, secure sharing of data across teams, departments, and external partners. Delta Sharing and cloud-native sharing protocols enable this without data duplication.
+- **Data Sharing** – Governed, secure sharing of data across teams, departments, and external partners. **Delta Sharing** (Databricks' open protocol for secure, zero-copy data sharing) enables this without data duplication. External sharing — with regulators (ERA, DWER), government agencies, research partners, and service providers — follows a formal governance process: domain owner approval, DPO review for PI/SOCI-classified data, technical data steward configuration, and periodic steward review of active shares. All recipient access is logged in Unity Catalog system tables for audit. The companion *Domain Governance Across Systems* document (section 7.4) defines this process in detail.
 - **APIs and Data Services** – Exposing data products as APIs for consumption by applications, services, and AI agents, enabling real-time, programmatic access.
 - **Databricks Apps** – Custom, governed web applications hosted directly on the Databricks platform, providing an additional consumption endpoint alongside dashboards and APIs. Databricks Apps allow teams to build interactive data applications (e.g. operational tools, parameter entry screens, approval workflows) that run within the platform's security and governance perimeter.
+
+**Data Product Lifecycle:**
+
+Data products are not static artefacts — they have a lifecycle that must be actively managed:
+
+- **Incubation** – The data product is in development. It may be accessible to the owning domain team for validation but is not published to the broader organisation. `classification_status = provisional` at most.
+- **Active** – The data product is published, certified, and actively consumed. It has a data contract, an SLA, a data product owner, and quality monitoring. This is the steady state for most products.
+- **Deprecation** – The data product has been superseded or is no longer needed. Consumers are notified and given a migration window to move to the replacement product. The product remains accessible but is flagged as deprecated in the catalogue.
+- **Retirement** – The data product is decommissioned. Access is revoked, compute resources are released, and the product is archived per retention policy. Every data product that is never retired is maintenance overhead and a governance risk.
+
+The data product owner is accountable for lifecycle decisions. The platform team supports lifecycle transitions through automation (deprecation notices, consumer impact analysis, scheduled decommissioning).
 
 **Self-Service Analytics:**
 
@@ -299,7 +316,7 @@ Security is not a feature to be bolted on; it is a foundational design constrain
 
 **Compliance:**
 
-Adhere to all applicable regulatory requirements – including the SOCI Act, PRIS Act, State Records Act, and Essential Eight cybersecurity standards. Implement data anonymisation, minimisation, and consent management practices as appropriate. Conduct periodic compliance audits and penetration testing.
+Adhere to all applicable regulatory requirements – including the SOCI Act 2018 (including the 2024 SOCI Rules amendments that expanded positive security obligations for critical infrastructure entities), PRIS Act 2024 (WA), Privacy Act 1988 (Cth), State Records Act 2000 (WA), and Essential Eight cybersecurity standards. Implement data anonymisation, minimisation, and consent management practices as appropriate. The Privacy Act reform programme (post-AGD review) may introduce new obligations around automated decision-making — particularly relevant where AI agents consume personal information from the data platform. Conduct periodic compliance audits and penetration testing.
 
 **Key Roles:** Data Security Specialist, Data Governance Manager, Data Steward, Data Engineer (security within pipelines and infrastructure).
 
@@ -327,7 +344,15 @@ Data quality is not a project; it is a continuous process embedded in every stag
 - **Consistency** – Data conforms to agreed definitions, formats, and business rules across systems and domains.
 - **Validity** – Data conforms to defined schemas, ranges, and business constraints.
 
-Implement automated data quality checks (expectations/assertions) within pipelines – at the point of ingestion, after transformation, and before serving. Use **data observability** tools to detect anomalies, drift, volume changes, schema changes, and freshness degradation proactively. **Databricks Lakehouse Monitoring** provides automated data profiling, drift detection, and quality observability on managed tables – enabling continuous statistical monitoring of data distributions without requiring custom instrumentation. The goal is to detect quality issues before consumers do, not after a dashboard breaks.
+Implement automated data quality checks (expectations/assertions) within pipelines – at the point of ingestion, after transformation, and before serving. Use **data observability** to detect issues proactively rather than waiting for downstream failures. Data observability covers five pillars:
+
+- **Freshness** – Has the data been updated within the expected SLA window? Stale data in Gold-layer products may indicate pipeline failure or source system issues.
+- **Volume** – Has the row count changed beyond expected bounds? Unexpected volume spikes or drops may indicate data loss, source system changes, or ingestion failures.
+- **Schema** – Have columns been added, removed, or changed type? Schema drift propagates through the medallion architecture and may break data contracts.
+- **Distribution** – Have the statistical properties of column values shifted? Distribution drift may indicate data quality degradation, source system changes, or — for AI/ML use cases — training data drift that affects model performance.
+- **Lineage** – Are all expected upstream dependencies producing data? Broken lineage is detected before it manifests as a quality issue in downstream data products.
+
+**Databricks Lakehouse Monitoring** provides automated data profiling, drift detection, and quality observability on managed tables – enabling continuous statistical monitoring across these five pillars without requiring custom instrumentation. The goal is to detect quality issues before consumers do, not after a dashboard breaks.
 
 The frontier in 2026 is **self-healing data pipelines**: observability systems that not only detect anomalies but can diagnose root causes and, for well-understood failure modes, automatically remediate (e.g. re-ingesting a failed batch, rolling back to the last known good state, or dynamically adjusting transformation logic). While full autonomy remains aspirational, the building blocks – automated alerting, root cause analysis, and programmatic remediation – are practical today.
 
@@ -345,7 +370,7 @@ Manage data from creation through archival and deletion. Define retention polici
 
 **Ethics and Privacy:**
 
-Protect Personally Identifiable Information (PII) and ensure ethical data use. Establish guidelines that respect individual privacy and rights. Embed privacy-by-design principles into data platform architecture.
+Protect Personally Identifiable Information (PII) and ensure ethical data use. Establish guidelines that respect individual privacy and rights. Embed privacy-by-design principles into data platform architecture. Track the lawful basis for processing personal information using the `pi_lawful_basis` governed tag (defined in the EDAP Tagging Strategy) to support regulatory audit, AI training approval gates, and consent management. Where data is consumed by AI agents or used for AI model training, verify that the lawful basis extends to the intended AI use — consent granted for operational processing does not automatically extend to model training.
 
 **Key Roles:** Data Governance Manager, Data Steward, Data Architect, Data Engineer.
 
@@ -365,6 +390,7 @@ DataOps applies Agile methodology, DevOps practices, and Statistical Process Con
 - **FinOps Integration** – Monitor, attribute, and optimise data platform costs continuously. Implement chargeback or showback models so domain teams understand the cost of the data products they own and consume. Right-size compute, leverage spot/preemptible instances for non-critical workloads, and automate cluster termination. Cost is a quality metric. Establish **cost benchmarking** practices: track cost-per-query, cost-per-TB-processed, and cost-per-data-product over time to identify trends, detect regressions, and demonstrate efficiency improvements. These benchmarks provide the quantitative foundation for FinOps decisions and help justify platform investment. **Databricks system tables** (billing, audit logs, usage, lineage) provide the native mechanism for cost attribution, security auditing, and operational observability – query them directly to build dashboards, alerts, and automated governance workflows without external tooling.
 - **Incident Response** – Proactive detection, automated alerting, clear escalation paths, and documented runbooks for common failure modes. Conduct blameless post-incident reviews and feed learnings back into system improvements. Define and maintain an on-call rotation for critical data pipelines.
 - **Environment Management** – Maintain isolated development, testing, and production environments with automated promotion workflows. Developers should be able to spin up representative environments quickly.
+- **Environmental Sustainability** – Data platform compute carries an environmental footprint. While not yet a regulatory requirement for Water Corporation, sustainability is an emerging consideration in enterprise data engineering and aligns with broader corporate responsibility commitments. Practical measures include: right-sizing compute (avoid over-provisioned clusters), using serverless compute that scales to zero when idle, scheduling batch workloads during off-peak energy periods where practical, and ensuring AI model training workloads are proportionate to the value delivered. FinOps practices that reduce cost also reduce environmental impact — compute efficiency and sustainability are complementary goals.
 
 **Cultural Principles:**
 
@@ -449,7 +475,7 @@ Software engineering principles are the bedrock of reliable, maintainable data s
 - **Code Review** – All changes reviewed by peers before merging. This is a quality gate, a knowledge-sharing mechanism, and a risk reduction practice. This applies equally to AI-generated code – review it with the same scrutiny you would apply to a junior team member's contribution.
 - **AI-Assisted Engineering** – AI coding assistants are now a standard part of the data engineering toolchain for generating SQL, writing tests, drafting documentation, and suggesting pipeline configurations. Use them aggressively to accelerate routine work, but maintain human accountability for architectural decisions, business logic correctness, and security. The engineer's value is shifting from writing code to validating, reviewing, and architecting systems – a transition from builder to strategist.
 - **Modular, Reusable Design** – Write transformation logic as composable, reusable modules. Avoid copy-paste duplication. Use parameterised templates and shared libraries.
-- **Declarative over Imperative** – Prefer declarative pipeline definitions (dbt models, Lakeflow Declarative Pipelines, Terraform) that describe *what* the desired state is, rather than imperative scripts that describe *how* to get there. Declarative approaches are more readable, more testable, and less error-prone.
+- **Declarative over Imperative** – Prefer declarative pipeline definitions (dbt models, Lakeflow Spark Declarative Pipelines, Terraform) that describe *what* the desired state is, rather than imperative scripts that describe *how* to get there. Declarative approaches are more readable, more testable, and less error-prone.
 - **Documentation** – Maintain clear documentation for pipelines, data models, infrastructure, and operational runbooks. Good documentation is not optional – it is a core engineering artefact that also serves as context for AI systems. Self-documenting code (clear naming, modular structure) combined with lightweight but maintained documentation in the data catalog and repository README files.
 - **Version Control and Collaboration** – Use Git-based platforms (GitHub, Azure DevOps, GitLab) for all code, with branching strategies, pull requests, and automated CI/CD pipelines.
 - **Databricks Asset Bundles (DABs)** – The recommended IaC/CI/CD approach for deploying Databricks pipelines, jobs, notebooks, and infrastructure configuration as code. DABs enable version-controlled, environment-promoted deployment of all Databricks assets – from development through to production – with a consistent, declarative project structure that integrates naturally with Git workflows and CI/CD systems.
@@ -538,4 +564,4 @@ The four lifecycles – Data Engineering, Business Intelligence, Data Science, a
 
 ---
 
-*This document is based on the data engineering lifecycle framework from Joe Reis and Matt Housley's* Fundamentals of Data Engineering *(O'Reilly, 2022), adapted for enterprise context. It complements the Business Intelligence Lifecycle and the Data Science Lifecycle. Last updated March 2026.*
+*This document is based on the data engineering lifecycle framework from Joe Reis and Matt Housley's* Fundamentals of Data Engineering *(O'Reilly, 2nd edition 2025), adapted for enterprise context. It complements the Business Intelligence Lifecycle and the Data Science Lifecycle. Last updated March 2026.*

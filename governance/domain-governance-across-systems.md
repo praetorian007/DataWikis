@@ -1,27 +1,20 @@
-# Governing Data Across Source Systems and the Enterprise Data Platform
+# Governing Data Across Source Systems and the Enterprise Data & Analytics Platform
 
-## A Domain-Based Approach to Federated Data Governance
-
-| | |
-|---|---|
-| **Classification** | OFFICIAL |
-| **Owner** | Architecture & Strategy |
-| **Status** | Draft |
-| **Last Updated** | March 2026 |
+**Mark Shaw** | Principal Data Architect
 
 ---
 
 ## 1. Purpose
 
-This document defines how conceptual data domains â representing business ownership of data â translate into practical governance enforcement across source systems (e.g. SAP ECC, Maximo, ESRI GIS) and the Enterprise Data Analytics Platform (EDAP). It establishes the governance architecture that ensures consistency between the policy decisions made at the domain level and the technical controls enforced at the system level.
+This document defines how conceptual data domains — representing business ownership of data — translate into practical governance enforcement across source systems (e.g. SAP ECC, Maximo, ESRI GIS) and the Enterprise Data & Analytics Platform (EDAP). It establishes the governance architecture that ensures consistency between the policy decisions made at the domain level and the technical controls enforced at the system level.
 
 ---
 
 ## 2. The Core Problem
 
-Data domains describe *who in the business is accountable* for data. A domain like "Asset Management" establishes that an executive owner and their stewards are responsible for the meaning, quality, classification, and appropriate use of asset data â regardless of where that data physically resides.
+Data domains describe *who in the business is accountable* for data. A domain like "Asset" establishes that an executive owner and their stewards are responsible for the meaning, quality, classification, and appropriate use of asset data — regardless of where that data physically resides.
 
-But asset data doesn't live in one place. It exists as functional locations and equipment records in SAP ECC, as work orders and asset hierarchies in Maximo, as spatial features in ESRI GIS, as documents in SharePoint/Nexus, and as tables across multiple zones of the EDAP medallion architecture. Each system has its own governance mechanism â SAP has authorisation objects, Maximo has security groups, GIS has feature service permissions, and the EDAP has Unity Catalog with governed tags and attribute-based access control (ABAC).
+But asset data doesn't live in one place. It exists as functional locations and equipment records in SAP ECC, as work orders and asset hierarchies in Maximo, as spatial features in ESRI GIS, as documents in SharePoint/Nexus, and as tables across multiple zones of the EDAP medallion architecture. Each system has its own governance mechanism — SAP has authorisation objects, Maximo has security groups, GIS has feature service permissions, and the EDAP has Unity Catalog with governed tags and attribute-based access control (ABAC).
 
 None of these systems natively understand the concept of a "data domain."
 
@@ -43,64 +36,64 @@ Domain owners are accountable for the *meaning, quality, classification, and app
 
 ### 3.3 Governance Follows the Data, Not the System
 
-When data moves from a source system into the EDAP, governance responsibility does not transfer â it extends. The source system remains the governance authority for operational data within its boundaries. The EDAP inherits and enriches that governance with domain-level classification, lineage, and access policy.
+When data moves from a source system into the EDAP, governance responsibility does not transfer — it extends. The source system remains the governance authority for operational data within its boundaries. The EDAP inherits and enriches that governance with domain-level classification, lineage, and access policy.
 
 ### 3.4 Open by Default, Restricted by Exception
 
-Data is presumed accessible unless a specific classification, regulation, or business requirement mandates restriction. Restrictions are expressed as governed tags and ABAC policies, making the exception â not the access â the thing that requires justification and governance action.
+Data is presumed accessible unless a specific classification, regulation, or business requirement mandates restriction. Restrictions are expressed as governed tags and ABAC policies, making the exception — not the access — the thing that requires justification and governance action.
 
 ### 3.5 Automate Enforcement, Reserve Human Judgement for Policy
 
-Classification tagging, access policy inheritance, lineage tracking, and quality monitoring should be automated through platform capabilities (governed tags, ABAC, data classification, DQ monitoring). Human governance effort is reserved for policy decisions, exception management, and stewardship review â activities that require business context and judgement.
+Classification tagging, access policy inheritance, lineage tracking, and quality monitoring should be automated through platform capabilities (governed tags, ABAC, data classification, DQ monitoring). Human governance effort is reserved for policy decisions, exception management, and stewardship review — activities that require business context and judgement.
 
 ---
 
 ## 4. Three-Layer Governance Architecture
 
-Governance operates at three distinct layers. The domain model is the connective tissue that ties them together â not a replacement for system-level governance.
+Governance operates at three distinct layers. The domain model is the connective tissue that ties them together — not a replacement for system-level governance.
 
 ```
-ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-â                                                                      â
-â                    LAYER 1: DOMAIN GOVERNANCE                        â
-â                      (Policy & Accountability)                       â
-â                                                                      â
-â   Domain owners and stewards define:                                 â
-â   â¢ Data classification (WAICP, SOCI, PRIS)                         â
-â   â¢ Access philosophy and exception criteria                         â
-â   â¢ Quality expectations and SLAs                                    â
-â   â¢ Business definitions and semantic standards                      â
-â   â¢ Regulatory obligation mapping                                    â
-â                                                                      â
-â   Produces: Policies, standards, classification decisions            â
-â   Does NOT produce: Technical controls directly                      â
-â                                                                      â
-âââââââââââââââââââââââââââââââââ¬âââââââââââââââââââââââââââââââââââââââ
-                                â
+┌──────────────────────────────────────────────────────────────────────┐
+│                                                                      │
+│                    LAYER 1: DOMAIN GOVERNANCE                        │
+│                      (Policy & Accountability)                       │
+│                                                                      │
+│   Domain owners and stewards define:                                 │
+│   • Data classification (WAICP, SOCI, PRIS)                         │
+│   • Access philosophy and exception criteria                         │
+│   • Quality expectations and SLAs                                    │
+│   • Business definitions and semantic standards                      │
+│   • Regulatory obligation mapping                                    │
+│                                                                      │
+│   Produces: Policies, standards, classification decisions            │
+│   Does NOT produce: Technical controls directly                      │
+│                                                                      │
+└───────────────────────────────┬──────────────────────────────────────┘
+                                │
                     Policy translation & validation
-                                â
-         ââââââââââââââââââââââââ¼âââââââââââââââââââââââ
-         â                      â                      â
-         â¼                      â¼                      â¼
-âââââââââââââââââââ  ââââââââââââââââââââ  ââââââââââââââââââââââââââââ
-â                 â  â                  â  â                          â
-â   LAYER 2:      â  â   LAYER 2:       â  â   LAYER 3:               â
-â   SOURCE SYSTEM â  â   SOURCE SYSTEM  â  â   EDAP GOVERNANCE        â
-â   GOVERNANCE    â  â   GOVERNANCE     â  â   (Platform Enforcement)  â
-â   (SAP ECC)     â  â   (Maximo)       â  â                          â
-â                 â  â                  â  â   Unity Catalog enforces: â
-â   Enforces via: â  â   Enforces via:  â  â   â¢ Governed tags         â
-â   â¢ Auth objectsâ  â   â¢ Security     â  â   â¢ ABAC policies         â
-â   â¢ Roles       â  â     groups       â  â   â¢ Row/column security   â
-â   â¢ Transaction â  â   â¢ Site-level   â  â   â¢ Data classification   â
-â     controls    â  â     restrictions â  â   â¢ Lineage tracking      â
-â                 â  â                  â  â   â¢ Metric views          â
-â                 â  â                  â  â   â¢ Discover marketplace  â
-â                 â  â                  â  â                          â
-âââââââââââââââââââ  ââââââââââââââââââââ  ââââââââââââââââââââââââââââ
+                                │
+         ┌──────────────────────┼──────────────────────┐
+         │                      │                      │
+         ▼                      ▼                      ▼
+┌─────────────────┐  ┌──────────────────┐  ┌──────────────────────────┐
+│                 │  │                  │  │                          │
+│   LAYER 2:      │  │   LAYER 2:       │  │   LAYER 3:               │
+│   SOURCE SYSTEM │  │   SOURCE SYSTEM  │  │   EDAP GOVERNANCE        │
+│   GOVERNANCE    │  │   GOVERNANCE     │  │   (Platform Enforcement)  │
+│   (SAP ECC)     │  │   (Maximo)       │  │                          │
+│                 │  │                  │  │   Unity Catalog enforces: │
+│   Enforces via: │  │   Enforces via:  │  │   • Governed tags         │
+│   • Auth objects│  │   • Security     │  │   • ABAC policies         │
+│   • Roles       │  │     groups       │  │   • Row/column security   │
+│   • Transaction │  │   • Site-level   │  │   • Data classification   │
+│     controls    │  │     restrictions │  │   • Lineage tracking      │
+│                 │  │                  │  │   • Metric views          │
+│                 │  │                  │  │   • Discover marketplace  │
+│                 │  │                  │  │                          │
+└─────────────────┘  └──────────────────┘  └──────────────────────────┘
 ```
 
-### 4.1 Layer 1 â Domain Governance (Policy & Accountability)
+### 4.1 Layer 1 — Domain Governance (Policy & Accountability)
 
 **What it is**: The organisational model where data domains, each with executive ownership, define the policies and standards that govern their data.
 
@@ -120,14 +113,14 @@ Each domain has the following governance roles:
 
 Domain governance decisions flow through a defined process:
 
-1. **Policy definition**: Domain owner (with steward input) establishes or updates a classification, access, or quality policy â e.g. "All data containing customer water usage patterns is classified OFFICIAL: SENSITIVE â PERSONAL under PRIS Act 2024."
+1. **Policy definition**: Domain owner (with steward input) establishes or updates a classification, access, or quality policy — e.g. "All data containing customer water usage patterns is classified OFFICIAL: SENSITIVE — PERSONAL under PRIS Act 2024."
 2. **Impact assessment**: Stewards identify which systems and EDAP zones hold data affected by the policy.
-3. **Control specification**: Stewards, working with technical custodians, specify the technical controls required in each system â e.g. governed tag `pris_classification = personal`, ABAC column masking policy on relevant columns, SAP authorisation role restriction.
+3. **Control specification**: Stewards, working with technical custodians, specify the technical controls required in each system — e.g. governed tag `pris_classification = personal`, ABAC column masking policy on relevant columns, SAP authorisation role restriction.
 4. **Implementation**: Technical custodians implement the controls in each system.
 5. **Validation**: Stewards validate that the controls correctly reflect the policy intent.
 6. **Ongoing monitoring**: Quality monitoring, audit logs, and governance dashboards provide continuous assurance.
 
-### 4.2 Layer 2 â Source System Governance (Operational Enforcement)
+### 4.2 Layer 2 — Source System Governance (Operational Enforcement)
 
 **What it is**: The system-native access controls and data management practices within each operational system.
 
@@ -147,55 +140,55 @@ Domain governance decisions flow through a defined process:
 - Changes to source system controls that affect domain-classified data require steward validation
 - Source system governance operates independently for operational concerns (e.g. who can post a goods receipt in SAP) that don't intersect with domain classification policy
 
-### 4.3 Layer 3 â EDAP Governance (Platform Enforcement)
+### 4.3 Layer 3 — EDAP Governance (Platform Enforcement)
 
-**What it is**: The governance layer within the Enterprise Data Analytics Platform, enforced through Unity Catalog, that becomes progressively more domain-aligned as data moves through the medallion architecture.
+**What it is**: The governance layer within the Enterprise Data & Analytics Platform, enforced through Unity Catalog, that becomes progressively more domain-aligned as data moves through the medallion architecture.
 
 **Key principle**: Governance becomes progressively more domain-aligned as data moves through the medallion zones. Source system governance is system-centric. Landing/Raw governance is platform-centric. Gold/BI governance is domain-centric.
 
 #### Governance by Medallion Zone
 
-**Landing & Raw Zones** â *Platform-centric governance*
+**Landing & Raw Zones** — *Platform-centric governance*
 
 - Ingestion service accounts have write access; data retains source system classification
 - Access restricted to the data engineering team
 - Governance focus: integrity, completeness, audit trail (`edap_`-prefixed audit columns)
-- Domain governance is minimal here â the data hasn't been transformed into domain-aligned structures
+- Domain governance is minimal here — the data hasn't been transformed into domain-aligned structures
 
-**Base / Protected Zones** â *Transitional governance*
+**Base / Protected Zones** — *Transitional governance*
 
 - Data is cleaned, conformed, and structured into domain-aligned schemas
 - Governed tags are applied reflecting domain classification decisions:
-  - `data_domain` = `asset_management`
+  - `data_domain` = `asset`
   - `waicp_classification` = `official_sensitive_operational`
   - `soci_critical` = `true`
   - `pris_classification` = `personal`
-- Automated Data Classification detects and tags PII, PHI, and other sensitive data patterns
+- Automated Data Classification detects and tags PI, PHI, and other sensitive data patterns
 - Steward-driven tagging supplements automated classification for business-context categories (e.g. SOCI critical infrastructure designation)
 - ABAC policies begin to take effect, enforcing row-level and column-level controls based on governed tags
 - Change detection (SHA-512 hash-based), SCD Type 2 tracking, and DQ annotation operate here
 
-**Enriched & Gold Zones** â *Domain-centric governance*
+**Enriched & Gold Zones** — *Domain-centric governance*
 
 - The domain model is fully expressed: domain-aligned schemas, governed business definitions, curated data products
-- **Governed Tags + ABAC** enforce domain owner access decisions at scale â policies defined at catalog level cascade through schemas and tables automatically
-- **Metric Views** (Unity Catalog Business Semantics) provide governed, certified business definitions â the enterprise-authoritative meaning of "Asset Condition Score", "Customer Churn Rate", etc.
+- **Governed Tags + ABAC** enforce domain owner access decisions at scale — policies defined at catalog level cascade through schemas and tables automatically
+- **Metric Views** (Unity Catalog Business Semantics) provide governed, certified business definitions — the enterprise-authoritative meaning of "Asset Condition Score", "Customer Churn Rate", etc.
 - **Discover Marketplace** surfaces certified data products organised by business domain, with ownership, documentation, quality signals, and usage insights
 - **External Lineage** traces data origin back to source systems (SAP, Maximo, etc.) and forward to consumption tools (Power BI, Tableau)
 - **Data Quality Monitoring** surfaces quality issues and attaches quality signals to discoverable assets
 - **AI-Generated Documentation** reduces the manual documentation burden, with stewards reviewing and certifying AI-generated descriptions
 
-**Sandbox / Exploratory Zones** â *Controlled flexibility*
+**Sandbox / Exploratory Zones** — *Controlled flexibility*
 
 - Domain-level access policies inherited from Gold zone via governed tags
 - Additional access may be granted for exploration purposes, subject to classification constraints
-- Data created in sandbox zones is not governed as authoritative â it requires promotion through a data product certification workflow to enter Gold
+- Data created in sandbox zones is not governed as authoritative — it requires promotion through a data product certification workflow to enter Gold
 
 ---
 
 ## 5. Governance Granularity: From Conceptual Objects to Physical Enforcement
 
-Domain governance operates at the level of **conceptual business objects** â "Customer Personal Information", "SOCI-Critical Asset Location", "Water Quality Test Result". But these concepts don't map cleanly to system-level containers. A governed concept may manifest as an entire table, a subset of columns within a table, a subset of rows, or even specific cell values depending on context.
+Domain governance operates at the level of **conceptual business objects** — "Customer Personal Information", "SOCI-Critical Asset Location", "Water Quality Test Result". But these concepts don't map cleanly to system-level containers. A governed concept may manifest as an entire table, a subset of columns within a table, a subset of rows, or even specific cell values depending on context.
 
 This granularity mismatch is the single most common point of failure in governance models that look clean on slides but break in reality.
 
@@ -203,22 +196,22 @@ This granularity mismatch is the single most common point of failure in governan
 
 | Granularity | Description | Example |
 |---|---|---|
-| **Row-level** | The same table contains both governed and ungoverned rows. Classification depends on a row attribute. | `dim_functional_location` contains both SOCI-critical and non-critical locations. In SAP ECC, the IFLOT table contains all functional locations â only a subset are SOCI-designated. |
+| **Row-level** | The same table contains both governed and ungoverned rows. Classification depends on a row attribute. | `dim_functional_location` contains both SOCI-critical and non-critical locations. In SAP ECC, the IFLOT table contains all functional locations — only a subset are SOCI-designated. |
 | **Column-level** | The same table contains both governed and ungoverned columns. Some attributes are sensitive, others are not. | A customer table has `customer_name`, `phone_number` (PRIS-classified personal data) alongside `customer_segment`, `region` (non-sensitive). In SAP, the business partner table (BUT000) has personal name fields alongside business classification fields. |
 | **Attribute-value** | The governance classification depends on the *value* of a particular attribute, not just its existence. | An asset condition score is unclassified for most assets but SOCI-sensitive when the asset is critical infrastructure. A water quality test result is routine operational data unless it relates to a contamination incident. |
 
 ### 5.2 The Governed Data Element
 
-The foundational unit of governance is not a table, schema, or database â it is a **governed data element**: a conceptual business attribute that has a classification, a domain owner, and a set of handling rules regardless of where it physically resides.
+The foundational unit of governance is not a table, schema, or database — it is a **governed data element**: a conceptual business attribute that has a classification, a domain owner, and a set of handling rules regardless of where it physically resides.
 
 Examples of governed data elements:
 
 | Governed Data Element | Domain | Classification | Physical Manifestation |
 |---|---|---|---|
-| Customer Name | Customer | OFFICIAL: SENSITIVE â PERSONAL (PRIS) | SAP BP master `BUT000.NAME_FIRST/LAST` â EDAP `base.customer.customer_name` â Gold `dim_customer.customer_name` |
-| Asset SOCI Criticality Flag | Asset Management | OFFICIAL: SENSITIVE â OPERATIONAL (SOCI) | SAP classification `AUSP` table values â Maximo `ASSET.SOCI_CRITICAL` â EDAP `dim_functional_location.soci_critical_flag` |
-| Water Quality Contamination Indicator | Operations | OFFICIAL: SENSITIVE â OPERATIONAL (SOCI) | Lab system `RESULTS.CONTAMINATION_FLAG` â EDAP `fact_water_quality.contamination_incident` |
-| Employee Health Record | People | OFFICIAL: SENSITIVE â PERSONAL (PRIS) | HR system personnel records â EDAP `dim_employee.health_indicator` (if ingested) |
+| Customer Name | Customer | OFFICIAL: SENSITIVE — PERSONAL (PRIS) | SAP BP master `BUT000.NAME_FIRST/LAST` → EDAP `base.customer.customer_name` → Gold `dim_customer.customer_name` |
+| Asset SOCI Criticality Flag | Asset | OFFICIAL: SENSITIVE — OPERATIONAL (SOCI) | SAP classification `AUSP` table values → Maximo `ASSET.SOCI_CRITICAL` → EDAP `dim_functional_location.soci_critical_flag` |
+| Water Quality Contamination Indicator | Operations | OFFICIAL: SENSITIVE — OPERATIONAL (SOCI) | Lab system `RESULTS.CONTAMINATION_FLAG` → EDAP `fact_water_quality.contamination_incident` |
+| Employee Health Record | People | OFFICIAL: SENSITIVE — PERSONAL (PRIS) | HR system personnel records → EDAP `dim_employee.health_indicator` (if ingested) |
 
 The steward's job is to maintain the register of governed data elements, their classifications, and the mapping of each element to its physical manifestation in each system. This register is the authoritative source for *what needs protecting and at what granularity*.
 
@@ -226,26 +219,26 @@ The steward's job is to maintain the register of governed data elements, their c
 
 Unity Catalog's governed tags and ABAC operate at all three granularity levels:
 
-**Column-level enforcement**: Governed tags are applied directly to columns, not just tables. When automated Data Classification detects that `customer_name`, `phone_number`, and `email_address` are PII, it tags those specific columns with `sensitivity = pii`. An ABAC column mask policy then enforces: *"for any column tagged `sensitivity = pii`, mask the value unless the requesting user is in the `pii_authorised` group."* The policy is defined once at the catalog level and automatically applies to every PII-tagged column in every table across every schema â current and future. Non-sensitive columns in the same table remain fully accessible.
+**Column-level enforcement**: Governed tags are applied directly to columns, not just tables. When automated Data Classification detects that `customer_name`, `phone_number`, and `email_address` are PI, it tags those specific columns with `sensitivity = pi`. An ABAC column mask policy then enforces: *"for any column tagged `sensitivity = pi`, mask the value unless the requesting user is in the `pi_authorised` group."* The policy is defined once at the catalog level and automatically applies to every PI-tagged column in every table across every schema — current and future. Non-sensitive columns in the same table remain fully accessible.
 
 ```sql
--- Example: ABAC column mask policy for PII
+-- Example: ABAC column mask policy for PI
 -- Defined once at catalog level, inherited by all tables
--- Triggers on any column tagged sensitivity = pii
+-- Triggers on any column tagged sensitivity = pi
 
-CREATE FUNCTION mask_pii(value STRING)
+CREATE FUNCTION mask_pi(value STRING)
 RETURNS STRING
 RETURN CASE
-  WHEN is_member('pii_authorised') THEN value
+  WHEN is_member('pi_authorised') THEN value
   ELSE '********'
 END;
 
 -- Policy applied via UI or API:
 -- Scope: prod_gold catalog, all schemas
--- Match columns: tag sensitivity = pii
--- Action: mask using mask_pii function
+-- Match columns: tag sensitivity = pi
+-- Action: mask using mask_pi function
 -- Applies to: All account users
--- Except: pii_authorised group
+-- Except: pi_authorised group
 ```
 
 **Row-level enforcement**: Governed tags are applied to the *table* (indicating it contains governed rows), and ABAC row filter policies use data values within the row to determine visibility. Everyone sees non-restricted rows; restricted rows are filtered for unauthorised users.
@@ -273,34 +266,34 @@ END;
 
 ### 5.4 The Highest Watermark Principle
 
-A table's *discovery-level classification* reflects the highest sensitivity of any data element it contains. This is the **highest watermark** â it governs how the table appears in Discover, how it is represented in audit queries, and which steward approval is required for access requests.
+A table's *discovery-level classification* reflects the highest sensitivity of any data element it contains. This is the **highest watermark** — it governs how the table appears in Discover, how it is represented in audit queries, and which steward approval is required for access requests.
 
 ```
-ââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-â  Table: dim_functional_location                       â
-â                                                       â
-â  Table-level tag (highest watermark):                 â
-â    waicp_classification = official_sensitive_operationalâ
-â    soci_relevant = true                               â
-â                                                       â
-â  Column-level tags:                                   â
-â    location_id           â (no sensitivity tag)       â
-â    location_description  â (no sensitivity tag)       â
-â    parent_location       â (no sensitivity tag)       â
-â    soci_critical_flag    â soci_filter_column = true  â
-â    gps_latitude          â soci_sensitive = true      â
-â    gps_longitude         â soci_sensitive = true      â
-â    security_zone_detail  â soci_sensitive = true      â
-â                                                       â
-â  Enforcement:                                         â
-â    Row filter: hides SOCI-critical rows from          â
-â                unauthorised users                     â
-â    Column mask: masks GPS coordinates and security    â
-â                 zone details for SOCI-critical rows   â
-â    Discovery: table appears as SENSITIVE in Discover  â
-â    Access: unrestricted for non-SOCI rows/columns    â
-â            restricted for SOCI elements only          â
-ââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+┌──────────────────────────────────────────────────────┐
+│  Table: dim_functional_location                       │
+│                                                       │
+│  Table-level tag (highest watermark):                 │
+│    waicp_classification = official_sensitive_operational│
+│    soci_relevant = true                               │
+│                                                       │
+│  Column-level tags:                                   │
+│    location_id           → (no sensitivity tag)       │
+│    location_description  → (no sensitivity tag)       │
+│    parent_location       → (no sensitivity tag)       │
+│    soci_critical_flag    → soci_filter_column = true  │
+│    gps_latitude          → soci_sensitive = true      │
+│    gps_longitude         → soci_sensitive = true      │
+│    security_zone_detail  → soci_sensitive = true      │
+│                                                       │
+│  Enforcement:                                         │
+│    Row filter: hides SOCI-critical rows from          │
+│                unauthorised users                     │
+│    Column mask: masks GPS coordinates and security    │
+│                 zone details for SOCI-critical rows   │
+│    Discovery: table appears as SENSITIVE in Discover  │
+│    Access: unrestricted for non-SOCI rows/columns    │
+│            restricted for SOCI elements only          │
+└──────────────────────────────────────────────────────┘
 ```
 
 The critical point: **enforcement operates at the column and row level, but discovery and audit operate at the table level**. This prevents over-restriction (users can still access non-sensitive portions of the table) while ensuring that audit, compliance, and discovery correctly identify all assets containing sensitive data.
@@ -333,21 +326,23 @@ Governed tags are the mechanism that makes domain governance enforceable at the 
 
 | Tag Category | Purpose | Examples | Enforcement Mechanism |
 |---|---|---|---|
-| **Domain** | Identifies business ownership | `data_domain = asset_management` | Discovery, stewardship routing, cost attribution |
+| **Domain** | Identifies business ownership | `data_domain = asset` | Discovery, stewardship routing, cost attribution |
 | **Regulatory Classification** | Maps regulatory obligations to assets | `waicp_classification = official_sensitive_personal` | ABAC column masking, row filtering |
 | **Critical Infrastructure** | SOCI Act designation | `soci_critical = true` | ABAC access restriction, enhanced audit logging |
 | **Privacy** | PRIS Act classification | `pris_classification = personal` | ABAC column masking, anonymisation in non-prod (per ADR-EDP-001) |
-| **Sensitivity** | Auto-detected data sensitivity | `sensitivity = pii`, `sensitivity = phi` | Automated Data Classification â ABAC masking |
+| **Consent / Lawful Basis** | Records the lawful basis for processing personal information | `pi_lawful_basis = legitimate_interest`, `pi_lawful_basis = consent` | Stewardship review, regulatory audit, AI training approval gate |
+| **Sensitivity** | Auto-detected data sensitivity | `sensitivity = pi`, `sensitivity = phi` | Automated Data Classification → ABAC masking |
 | **Quality Tier** | Steward-certified quality level | `quality_tier = certified`, `quality_tier = provisional` | Discover marketplace ranking, consumer trust signals |
 | **Data Product** | Data product membership | `data_product = asset_condition_analytics` | Discover marketplace organisation, access request bundling |
 
 ### 6.2 Tag Governance Process
 
 1. **Tag policies** are defined at the account level by the central governance function, establishing the controlled vocabulary (allowed tag keys and permitted values)
-2. **Automated classification** applies sensitivity tags (PII, PHI) without human intervention
+2. **Automated classification** applies sensitivity tags (PI, PHI) without human intervention
 3. **Steward-driven tagging** applies domain, regulatory, and quality tags based on domain policy decisions
-4. **ABAC policies** reference governed tags to enforce access controls â defined once at the catalog or schema level, automatically inherited by all current and future tables
-5. **Audit and monitoring** via system tables and Governance Insights dashboard track tag application, policy enforcement, and access patterns
+4. **ABAC policies** reference governed tags to enforce access controls — defined once at the catalog or schema level, automatically inherited by all current and future tables
+5. **Consent and lawful basis tagging** records the legal basis for processing personal information against PI-classified assets, supporting regulatory audit and gating AI training approvals
+6. **Audit and monitoring** via system tables and Governance Insights dashboard track tag application, policy enforcement, and access patterns
 
 ---
 
@@ -357,51 +352,52 @@ The hardest governance challenge is ensuring that a domain policy decision propa
 
 ### 7.1 EDAP as Governance Hub
 
-For the current maturity stage, the EDAP (via Unity Catalog) serves as the **governance hub** â the system of record for domain classification taxonomy and the primary enforcement point for analytics governance:
+For the current maturity stage, the EDAP (via Unity Catalog) serves as the **governance hub** — the system of record for domain classification taxonomy and the primary enforcement point for analytics governance:
 
 ```
-                    ââââââââââââââââââââââââââââ
-                    â     Domain Governance     â
-                    â    (Policy Decisions)     â
-                    ââââââââââââââ¬ââââââââââââââ
-                                 â
-                    ââââââââââââââ¼ââââââââââââââ
-                    â   Unity Catalog (EDAP)    â
-                    â                          â
-                    â  â¢ Governed Tags          â
-                    â    (classification        â
-                    â     taxonomy)             â
-                    â  â¢ ABAC Policies          â
-                    â  â¢ Metric Views           â
-                    â  â¢ Discover Marketplace   â
-                    â  â¢ External Lineage       â
-                    â                          â
-                    â  System of record for:    â
-                    â  domain classification,   â
-                    â  business definitions,    â
-                    â  analytics access policy  â
-                    â                          â
-                    ââââ¬âââââââââââââ¬ââââââââ¬âââ
-                       â            â       â
-            ââââââââââââ¼âââ  âââââââ¼âââââ ââ¼âââââââââââ
-            â  SAP ECC    â  â Maximo   â â ESRI GIS  â
-            â             â  â          â â           â
-            â Operational â  âOperationalâ âOperationalâ
-            â governance  â  âgovernance â âgovernance â
-            â (native     â  â(native   â â(native    â
-            â  controls)  â  â controls)â â controls) â
-            â             â  â          â â           â
-            â Stewards    â  âStewards  â âStewards   â
-            â validate    â  âvalidate  â âvalidate   â
-            â alignment   â  âalignment â âalignment  â
-            âââââââââââââââ  ââââââââââââ âââââââââââââ
+                    ┌──────────────────────────┐
+                    │     Domain Governance     │
+                    │    (Policy Decisions)     │
+                    └────────────┬─────────────┘
+                                 │
+                    ┌────────────▼─────────────┐
+                    │   Unity Catalog (EDAP)    │
+                    │                          │
+                    │  • Governed Tags          │
+                    │    (classification        │
+                    │     taxonomy)             │
+                    │  • ABAC Policies          │
+                    │  • Metric Views           │
+                    │  • Discover Marketplace   │
+                    │  • External Lineage       │
+                    │                          │
+                    │  System of record for:    │
+                    │  domain classification,   │
+                    │  business definitions,    │
+                    │  analytics access policy  │
+                    │                          │
+                    └──┬────────────┬───────┬──┘
+                       │            │       │
+            ┌──────────▼──┐  ┌─────▼────┐ ┌▼──────────┐
+            │  SAP ECC    │  │ Maximo   │ │ ESRI GIS  │
+            │             │  │          │ │           │
+            │ Operational │  │Operational│ │Operational│
+            │ governance  │  │governance │ │governance │
+            │ (native     │  │(native   │ │(native    │
+            │  controls)  │  │ controls)│ │ controls) │
+            │             │  │          │ │           │
+            │ Stewards    │  │Stewards  │ │Stewards   │
+            │ validate    │  │validate  │ │validate   │
+            │ alignment   │  │alignment │ │alignment  │
+            └─────────────┘  └──────────┘ └───────────┘
 ```
 
 **How it works**:
 
 - Domain classification decisions are recorded as governed tags in Unity Catalog
 - ABAC policies enforce those classifications within the EDAP automatically
-- Stewards maintain a **cross-system alignment register** (initially in Confluence, potentially in Purview or a business catalogue as maturity increases) that maps each domain classification decision to its corresponding source system controls
+- **Alation** serves as the enterprise data discovery and cataloguing tool, providing business user-facing search, data dictionary management, and stewardship workflow capabilities that complement Unity Catalog's platform-level enforcement. Unity Catalog Discover provides domain-organised discovery within the EDAP; Alation provides broader enterprise catalogue coverage including source systems and non-EDAP data assets. Where both tools catalogue the same asset, Unity Catalog is authoritative for classification and access enforcement, and Alation is authoritative for business context, usage guidance, and stewardship workflows
+- Stewards maintain a **cross-system alignment register** (initially in Confluence, with Alation providing catalogue-level cross-referencing as adoption matures) that maps each domain classification decision to its corresponding source system controls
 - Periodic stewardship reviews validate that source system controls remain aligned with the EDAP-authoritative classification taxonomy
 
 ### 7.2 When to Introduce an Enterprise Catalogue Layer
@@ -413,18 +409,50 @@ The EDAP-as-governance-hub pattern is appropriate when:
 - The source system estate is manageable in scope (fewer than ~10 major systems)
 - Regulatory requirements can be met through a combination of Unity Catalog enforcement + documented stewardship processes
 
-Consider introducing a dedicated enterprise catalogue layer (e.g. Microsoft Purview Unified Catalog, Collibra, Atlan) when:
+Consider introducing a dedicated enterprise governance catalogue layer (e.g. Microsoft Purview Unified Catalog, Collibra, Atlan) when:
 
-- Regulatory audit requirements demand a *single, unified view* of data access and classification across all systems â not just the EDAP
+- Regulatory audit requirements demand a *single, unified view* of data access and classification across all systems — not just the EDAP
 - The source system estate grows to a scale where manual cross-system alignment registers become unsustainable
 - Formal stewardship workflows with multi-step approval chains, escalation paths, and SLA tracking are required by regulation or organisational policy
 - Cross-platform data product discovery is needed (e.g. business users need to discover data in SAP, Maximo, GIS, and EDAP from a single interface)
+
+**Note:** Alation already provides enterprise catalogue capabilities including business glossary, data dictionary, and stewardship workflow. The decision to introduce an additional governance-focused catalogue (Purview, Collibra) should be evaluated against extending Alation's current role before introducing a new tool.
+
+### 7.3 Lakehouse Federation
+
+Unity Catalog supports **federated queries** across external data sources (PostgreSQL, MySQL, SQL Server, and other JDBC-connected systems). This capability is directly relevant to the governance model:
+
+- Federated queries allow the EDAP to query source system data **in place** without ingestion, which is useful for ad-hoc governance validation, cross-referencing source system state against EDAP-held data, and supporting use cases where data should not be copied (e.g. highly sensitive operational data that must remain in the source system for regulatory reasons).
+- Federated connections are governed through Unity Catalog — the same ABAC policies, governed tags, and audit logging apply to federated queries as to native EDAP tables.
+- Federation does **not** replace ingestion for analytics workloads. It complements the medallion architecture by providing a governed read path to source systems for validation, reconciliation, and edge-case access patterns.
+- Domain stewards should be aware that federated queries against source systems are subject to both EDAP governance (Unity Catalog ABAC) and source system governance (native access controls). Both layers must be satisfied.
+
+### 7.4 Delta Sharing for Cross-Organisation Data Exchange
+
+Water Corporation shares data with external parties — regulators (ERA, DWER), government agencies, research partners, and service providers. **Delta Sharing** (Databricks' open protocol for secure, zero-copy data sharing) provides the mechanism for governed cross-organisation data exchange:
+
+- **Zero-copy sharing**: Recipients access data in place without copying it to their own storage. This means Water Corporation retains control — access can be revoked, audited, and scoped to specific tables, partitions, or time windows.
+- **Governance enforcement**: Shared data products are governed by the same ABAC policies and governed tags as internal access. Sharing is additive — it grants external access to data that already has classification and access controls applied. Sensitive columns (PI, SOCI-critical) can be excluded or masked in shared views.
+- **Recipient controls**: Shares are scoped to named recipients with time-limited tokens. The domain owner approves each sharing relationship; the data product owner defines the scope and SLA of the share.
+- **Audit trail**: All recipient access is logged in Unity Catalog system tables, providing the audit evidence required for SOCI Act and PRIS Act compliance.
+- **Regulatory sharing**: For mandatory regulatory data submissions (e.g. ERA performance reporting, DWER environmental compliance), Delta Sharing provides a governed alternative to file-based extracts, reducing the risk of uncontrolled data copies and ensuring the regulator always accesses the most current, governed version.
+
+**Governance process for external sharing:**
+
+1. The **domain owner** approves the sharing relationship and classifies the data sensitivity of the share.
+2. The **data product owner** defines the share scope — which tables, columns, rows, and freshness are included.
+3. The **DPO** reviews any share that includes PI or SOCI-classified data.
+4. The **technical data steward** configures the share in Unity Catalog with appropriate ABAC policies and exclusions.
+5. The **platform team** provisions the recipient and manages token lifecycle.
+6. The **domain steward** periodically reviews active shares for continued appropriateness.
 
 ---
 
 ## 8. AI Governance in the Federated Model
 
 As AI and machine learning capabilities mature within the EDAP, the three-layer governance model must extend to cover AI-specific governance concerns. AI introduces new risks around data usage rights, model output ownership, and cross-domain data combination that the existing classification model does not fully address.
+
+This section aligns with **ISO/IEC 42001:2023** (AI Management Systems), the **NIST AI Risk Management Framework (AI RMF 1.0)**, and the **Australian Government Voluntary AI Safety Standard** (2024). As the Voluntary AI Safety Standard may transition to mandatory requirements, the governance controls described here are designed to satisfy both current voluntary and anticipated mandatory obligations.
 
 ### 8.1 Approval for AI Training Use
 
@@ -441,7 +469,7 @@ When an AI model consumes data from multiple domains, the governance of the mode
 
 - The model output is treated as a **new data product** and must have an assigned domain owner and data product owner.
 - The output inherits the **highest watermark classification** of all contributing input domains.
-- All contributing domain owners must be consulted before the model output is published as a data product. Where any contributing domain owner objects, the matter is escalated to the EIGC.
+- All contributing domain owners must be consulted before the model output is published as a data product. Where any contributing domain owner objects, the matter is escalated to the Data Governance Council.
 - Lineage must trace model outputs back to contributing source domains, enabling impact analysis when source data classifications change.
 
 ### 8.3 AI-Generated Data Products
@@ -487,28 +515,48 @@ AI agents that autonomously access, combine, or act on data within the EDAP are 
 | Data product certification | % of Discover-published data products with steward certification | > 80% |
 | Quality signal coverage | % of Gold zone tables with active DQ monitoring | > 90% |
 
-### 9.3 Incident Response Governance
+### 9.3 Data Observability
+
+Governance metrics (section 9.2) measure governance programme health at a point in time. **Data observability** complements this with continuous, automated monitoring of the data itself — detecting issues proactively rather than waiting for downstream failures or stewardship reviews.
+
+Data observability covers five pillars, each monitored through Lakehouse Monitoring and DQ expectations within the EDAP:
+
+| Pillar | What It Monitors | Governance Implication |
+|---|---|---|
+| **Freshness** | Has the data been updated within the expected SLA window? | Stale data in Gold zone data products may indicate pipeline failure or source system issues. Freshness alerts trigger the quality accountability model (section 9.4). |
+| **Volume** | Has the row count changed beyond expected bounds? | Unexpected volume spikes or drops may indicate source system changes, data loss, or ingestion failures. |
+| **Schema** | Have columns been added, removed, or changed type? | Schema changes propagate through the medallion architecture and may break data contracts. Schema drift alerts trigger impact assessment by the technical data steward. |
+| **Distribution** | Have the statistical properties of column values shifted? | Distribution drift in key business columns may indicate data quality degradation, source system changes, or — for AI/ML use cases — training data drift that affects model performance. |
+| **Lineage** | Are all expected upstream dependencies producing data? | Broken lineage (a source table that stops updating) is detected before it manifests as a quality issue in downstream data products. |
+
+**How observability integrates with governance:**
+
+- Observability alerts are routed to the accountable role defined in the quality accountability model (section 9.4) — pipeline owner for ingestion issues, domain steward for transformation issues, data product owner for product-level issues.
+- Freshness and volume alerts for SOCI-critical or PRIS-classified data products are escalated to the domain owner and, where applicable, the DPO.
+- Observability signals are surfaced alongside data products in Discover and Alation, giving consumers visibility into the current health of data they depend on.
+
+### 9.4 Incident Response Governance
 
 Data governance incidents require a clear command structure that operates across the three-layer model. The following incident types are in scope:
 
 | Incident Type | Description | Mandatory Reporting |
 |---|---|---|
-| **PII exposure** | Unauthorised access to or disclosure of personal information | PRIS Act 2024 breach notification obligations; Privacy Commissioner notification where applicable |
+| **PI exposure** | Unauthorised access to or disclosure of personal information | PRIS Act 2024 breach notification obligations; Privacy Commissioner notification where applicable |
 | **SOCI-classified data leak** | Unauthorised access to or disclosure of data classified under the SOCI Act 2018 | SOCI Act mandatory reporting to the Cyber and Infrastructure Security Centre (CISC) within timeframes prescribed by the Act |
 | **Data quality incident** | A material data quality failure that affects downstream decision-making, reporting, or regulatory compliance | Internal escalation; regulatory reporting where the quality failure affects compliance obligations |
 
 **Incident command model:**
 
-- The **Data Protection Officer (DPO)** is the incident commander for PII exposure and SOCI-classified data leak incidents. The DPO coordinates response across all three governance layers, engages legal and compliance, and manages mandatory reporting obligations.
-- The **domain owner** is the incident commander for data quality incidents within their domain. Where a quality incident spans multiple domains, the EIGC nominates a lead domain owner.
+- The **Data Protection Officer (DPO)** is the incident commander for PI exposure and SOCI-classified data leak incidents. The DPO coordinates response across all three governance layers, engages legal and compliance, and manages mandatory reporting obligations.
+- The **domain owner** is the incident commander for data quality incidents within their domain. Where a quality incident spans multiple domains, the Data Governance Council nominates a lead domain owner.
 - During an incident, the three-layer model operates as follows:
   - **Layer 1 (Domain Governance):** The domain owner authorises emergency access changes, temporary data restrictions, or communication to affected stakeholders.
   - **Layer 2 (Source System Governance):** Source system administrators implement emergency access revocations or restrictions as directed by the incident commander.
   - **Layer 3 (EDAP Governance):** The platform team implements emergency Unity Catalog access revocations, tag changes, or data quarantine actions as directed by the incident commander.
 
-**SOCI Act mandatory reporting:** As a critical infrastructure entity under the SOCI Act 2018, Water Corporation has mandatory reporting obligations for cyber security incidents affecting critical infrastructure assets. The DPO, in coordination with the CISO, must ensure that incidents involving SOCI-classified data are reported to the CISC within the prescribed timeframes (currently 12 hours for critical incidents, 72 hours for other reportable incidents). The governance register must record all incident response actions for audit purposes.
+**SOCI Act mandatory reporting:** As a critical infrastructure entity under the SOCI Act 2018, Water Corporation has mandatory reporting obligations for cyber security incidents affecting critical infrastructure assets. The DPO, in coordination with the CISO, must ensure that incidents involving SOCI-classified data are reported to the CISC within the prescribed timeframes (currently 12 hours for critical incidents, 72 hours for other reportable incidents). The 2024 SOCI Rules amendments expanded positive security obligations for critical infrastructure entities, including enhanced risk management programme requirements and broader definitions of reportable incidents — the incident response governance described here must be reviewed against these expanded obligations. The governance register must record all incident response actions for audit purposes.
 
-### 9.4 Quality Accountability Model
+### 9.5 Quality Accountability Model
 
 Data quality accountability follows the data through each transition point from source to consumption:
 
@@ -528,7 +576,7 @@ Quality issues discovered downstream are traced back to the earliest responsible
 To illustrate how the three-layer model works in practice:
 
 **Domain policy decision** (Layer 1):
-The Asset Management domain owner, in consultation with the SOCI Act compliance team, determines that all data relating to water treatment plant assets designated as critical infrastructure under SOCI Act 2018 must be classified `OFFICIAL: SENSITIVE â OPERATIONAL` and restricted to personnel with a verified operational need.
+The Asset domain owner, in consultation with the SOCI Act compliance team, determines that all data relating to water treatment plant assets designated as critical infrastructure under SOCI Act 2018 must be classified `OFFICIAL: SENSITIVE — OPERATIONAL` and restricted to personnel with a verified operational need.
 
 **Source system enforcement** (Layer 2):
 
@@ -543,11 +591,11 @@ The Asset Management domain owner, in consultation with the SOCI Act compliance 
 | Zone | Control Implementation |
 |---|---|
 | Landing / Raw | Ingested with source audit metadata. Access restricted to data engineering service accounts. |
-| Base / Protected | Governed tags applied: `data_domain = asset_management`, `soci_critical = true`, `waicp_classification = official_sensitive_operational`. ABAC row filter policy activated: only users in the `soci_authorised` group can access rows where `soci_critical = true`. |
+| Base / Protected | Governed tags applied: `data_domain = asset`, `soci_critical = true`, `waicp_classification = official_sensitive_operational`. ABAC row filter policy activated: only users in the `soci_authorised` group can access rows where `soci_critical = true`. |
 | Gold / BI | Data product "Critical Infrastructure Asset Analytics" published to Discover marketplace with domain ownership, steward certification, quality signals, and SOCI access restriction. Metric Views define governed calculations for critical asset condition scoring. External lineage traces data provenance to SAP ECC and Maximo source records. |
 
 **Steward validation**:
-The Asset Management data steward validates that ABAC policies in the EDAP, SAP authorisation roles, Maximo security groups, and GIS feature service permissions all consistently enforce the domain owner's access restriction. This validation is recorded in the cross-system alignment register and reviewed at the fortnightly stewardship review.
+The Asset data steward validates that ABAC policies in the EDAP, SAP authorisation roles, Maximo security groups, and GIS feature service permissions all consistently enforce the domain owner's access restriction. This validation is recorded in the cross-system alignment register and reviewed at the fortnightly stewardship review.
 
 ---
 
@@ -567,17 +615,52 @@ This governance model operates within the broader enterprise architecture contex
 
 ---
 
-## 12. Future State Considerations
+## 12. Data Contracts
+
+Data contracts are the formal interface between data producers and consumers. They define the commitments a data product makes to its consumers and provide the enforceable agreement that underpins trust in shared data.
+
+### 12.1 Data Contract Structure
+
+A data contract specifies:
+
+| Contract Element | Description |
+|---|---|
+| **Schema definition** | Guaranteed column structure, data types, and nullable constraints. The contract schema is the stable interface — internal implementation may change provided the contract schema is honoured. |
+| **Freshness SLA** | Maximum acceptable latency between source change and data product availability. Tiered by criticality (e.g. `real-time`, `hourly`, `daily`). |
+| **Quality thresholds** | Minimum acceptable DQ pass rates and specific rules the producer commits to enforcing (e.g. "customer_id is never null", "order_total is non-negative"). |
+| **Ownership** | The data product owner accountable for meeting the contract. |
+| **Versioning** | Semantic versioning with a defined deprecation period for breaking changes. Major version increments indicate breaking changes; minor versions indicate backwards-compatible additions. |
+| **Breaking change policy** | How breaking changes are communicated and managed — `versioned` (new major version published alongside the old, with a deprecation window), `notify` (consumers notified in advance, no parallel version), or `unmanaged` (no guarantees — appropriate only for sandbox/exploratory data). |
+
+### 12.2 Contract Enforcement
+
+Contracts are enforced through the SDP framework and Unity Catalog:
+
+- `contract_version`, `contract_sla_tier`, and `breaking_change_policy` are recorded as governed tags in Unity Catalog.
+- **Schema enforcement**: Pipeline expectations validate that the published schema matches the contract schema on every run. Schema drift triggers an alert to the data product owner and blocks promotion to Gold where the contract specifies `versioned` breaking change policy.
+- **Freshness monitoring**: Lakehouse Monitoring tracks data product update timestamps against the contracted SLA tier and alerts the data product owner on SLA breach.
+- **Quality monitoring**: DQ expectations defined in the SDP pipeline specification enforce the contracted quality thresholds. Quality failures are surfaced in observability dashboards (section 9.3) and, for certified data products, trigger the quality accountability model (section 9.5).
+
+### 12.3 Contract Governance
+
+- The **data product owner** is accountable for defining and honouring the contract.
+- The **domain steward** validates that the contract's quality thresholds and schema align with domain governance requirements.
+- **Consumers** can view contract terms through Discover and Alation, and raise disputes through the domain steward when contract commitments are not met.
+- Contract changes follow the versioning and breaking change policy defined in the contract itself. The data product owner is responsible for consumer communication and migration support during breaking changes.
+
+---
+
+## 13. Future State Considerations
 
 As the governance model matures, the following evolutionary steps should be evaluated:
 
-1. **Purview integration**: If regulatory audit requirements for SOCI or PRIS Act demand a single cross-system governance view, Microsoft Purview Unified Catalog can provide a federated discovery and compliance layer that scans Unity Catalog alongside SAP, Maximo, and other Azure-connected sources. Purview's governance domains align naturally with the domain model described here.
+1. **Purview integration**: If regulatory audit requirements for SOCI or PRIS Act demand a single cross-system governance view, Microsoft Purview Unified Catalog can provide a federated discovery and compliance layer that scans Unity Catalog alongside SAP, Maximo, and other Azure-connected sources. Purview's governance domains align naturally with the domain model described here. This should be evaluated against extending Alation's existing enterprise catalogue role.
 
-2. **Formal stewardship workflows**: If the stewardship cadence described in section 8.1 proves insufficient for regulatory demands, a dedicated business catalogue (Collibra, Atlan) can provide workflow orchestration with approval chains, escalation paths, and SLA tracking. This should be a pull-based decision driven by demonstrated need, not a push-based procurement.
+2. **Formal stewardship workflows**: If the stewardship cadence described in section 9.1 proves insufficient for regulatory demands, a dedicated governance workflow engine (Collibra, Atlan, or Alation's stewardship workflow capabilities) can provide workflow orchestration with approval chains, escalation paths, and SLA tracking. This should be a pull-based decision driven by demonstrated need, not a push-based procurement.
 
-3. **Data contracts** (current emerging practice): Data contracts are being adopted as the formal interface between producer and consumer domains. A data contract defines: a **schema definition** (guaranteed column structure, data types, and nullable constraints); a **freshness SLA** (maximum acceptable latency between source change and data product availability); **quality thresholds** (minimum acceptable DQ pass rates and specific rules the producer commits to enforcing); **ownership** (the data product owner accountable for meeting the contract); **versioning** (semantic versioning with a defined deprecation period for breaking changes); and a **breaking change policy** (versioned, notify, or unmanaged). Contracts are enforced through the SDP framework (`contract_version`, `contract_sla_tier`, and `breaking_change_policy` tags in Unity Catalog) and monitored via Lakehouse Monitoring and DQ expectations. This replaces the earlier framing of data contracts as a future-state consideration; they are now an active part of the governance model.
+3. **Consent management platform**: As Privacy Act reform progresses (particularly around automated decision-making and enhanced consent requirements), Water Corporation may need a dedicated consent management capability that tracks consent records, lawful basis, and purpose limitation at the individual level — integrated with the `pi_lawful_basis` tagging described in section 6.1. This is distinct from classification tagging (which governs data categories) and would provide individual-level consent tracking for regulatory compliance.
 
-4. **Computational governance**: Progressively shift governance enforcement from human-driven stewardship review towards automated, policy-as-code execution â governed tags applied automatically based on schema patterns, ABAC policies inherited by convention, quality rules enforced in pipelines. Human governance effort shifts from enforcement to exception management and policy evolution.
+4. **Deepening computational governance**: The governance model already employs significant automation — governed tags applied by automated Data Classification, ABAC policies inherited by convention, quality rules enforced in pipelines. The next maturity step is to formalise this as **policy-as-code**: governance policies expressed as versioned, testable, deployable code artefacts (tag assignment rules, ABAC policy definitions, quality threshold configurations) managed through the same CI/CD practices as application code. This shifts the remaining human governance effort from enforcement to exception management and policy evolution.
 
 ---
 
@@ -585,12 +668,17 @@ As the governance model matures, the following evolutionary steps should be eval
 
 | Reference | Description |
 |---|---|
-| EDAP-FWK-001 | Streaming Declarative Pipeline Framework Specification |
+| EDAP-FWK-001 | Spark Declarative Pipeline Framework Specification |
 | ADR-EDP-001 | Databricks Development Environment Data Strategy |
 | WAICP | WA Information Classification Policy |
-| SOCI Act 2018 | Security of Critical Infrastructure Act |
-| PRIS Act 2024 | Privacy and Responsible Information Sharing Act |
-| State Records Act 2000 | WA State Records Act |
+| SOCI Act 2018 (Cth) | Security of Critical Infrastructure Act, including 2024 SOCI Rules amendments |
+| PRIS Act 2024 (WA) | Privacy and Responsible Information Sharing Act |
+| Privacy Act 1988 (Cth) | Australian Privacy Act, including Notifiable Data Breaches scheme (Part IIIC) |
+| State Records Act 2000 (WA) | WA State Records Act |
 | Essential Eight | ACSC Essential Eight Maturity Model |
-| Dehghani, Z. (2022) | *Data Mesh: Delivering Data-Driven Value at Scale* â Federated computational governance principles |
-| Databricks (2025) | Unity Catalog ABAC, Governed Tags, Business Semantics, and Discover documentation |
+| ISO/IEC 42001:2023 | AI Management Systems — requirements and guidance |
+| NIST AI RMF 1.0 | AI Risk Management Framework — governance, mapping, measuring, managing AI risk |
+| Australian Government (2024) | Voluntary AI Safety Standard |
+| Dehghani, Z. (2022) | *Data Mesh: Delivering Data-Driven Value at Scale* — Federated computational governance principles |
+| Databricks (2025) | Unity Catalog ABAC, Governed Tags, Business Semantics, Discover, Delta Sharing, and Lakehouse Federation documentation |
+| Alation | Enterprise data discovery and cataloguing platform — business glossary, data dictionary, and stewardship workflows |

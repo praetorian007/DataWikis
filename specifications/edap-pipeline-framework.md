@@ -1,6 +1,6 @@
 # Enterprise Data Analytics Platform
 
-## Configurable Pipeline Framework â Requirements Specification
+## Configurable Pipeline Framework: Requirements Specification
 
 | | |
 |---|---|
@@ -24,7 +24,7 @@
 7. [Processing Flow](#7-processing-flow)
 8. [Acceptance Criteria](#8-acceptance-criteria)
 9. [Open Questions and Decisions](#9-open-questions-and-decisions)
-10. [Appendix A â DLT-META Gap Analysis](#appendix-a--dlt-meta-gap-analysis)
+10. [Appendix A: DLT-META Gap Analysis](#appendix-a--dlt-meta-gap-analysis)
 11. [Document History](#11-document-history)
 
 ---
@@ -33,9 +33,9 @@
 
 ### 1.1 Purpose
 
-This document defines the functional and non-functional requirements for a configurable pipeline framework that automates the movement and transformation of data across the layers and zones of the Enterprise Data Analytics Platform (EDAP).
+ This document defines the functional and non-functional requirements for a configurable pipeline framework that automates the movement and transformation of data across the layers and zones of the Enterprise Data & Analytics Platform (EDAP).
 
-The framework must provide a metadata-driven, zero-code or low-code mechanism to onboard new source entities through configuration rather than bespoke pipeline development. It will be implemented using Databricks Lakeflow Streaming Declarative Pipelines (SDP) and governed through Unity Catalog.
+The framework must provide a metadata-driven, zero-code or low-code mechanism to onboard new source entities through configuration rather than bespoke pipeline development. It will be implemented using Databricks Lakeflow Spark Declarative Pipelines (SDP) and governed through Unity Catalog.
 
 While the framework is designed to be general-purpose across the EDAP medallion architecture, the **primary delivery focus** is the Raw Zone (Bronze) to Base Zone (Silver) transition. This zone transition is the most common, most standardised, and highest-volume processing pattern in the platform. Subsequent zone transitions (Base-to-Enriched, Enriched-to-Gold) will be delivered incrementally, reusing the same engine with zone-specific configuration.
 
@@ -43,12 +43,12 @@ While the framework is designed to be general-purpose across the EDAP medallion 
 
 The framework covers configurable pipeline processing across the following zone transitions:
 
-| Zone Transition | Source â Target | Delivery Priority |
+| Zone Transition | Source to Target | Delivery Priority |
 |---|---|---|
-| Raw â Base | Bronze Raw â Silver Base | **Phase 1 (primary)** |
-| Base â Enriched | Silver Base â Silver Enriched | Phase 2 |
-| Enriched â Exploratory | Silver Enriched â Gold Exploratory | Phase 3 |
-| Enriched â BI | Silver Enriched â Gold BI | Phase 3 |
+| Raw to Base | Bronze Raw to Silver Base | **Phase 1 (primary)** |
+| Base to Enriched | Silver Base to Silver Enriched | Phase 2 |
+| Enriched to Exploratory | Silver Enriched to Gold Exploratory | Phase 3 |
+| Enriched to BI | Silver Enriched to Gold BI | Phase 3 |
 
 The framework addresses the following capabilities as a generic engine:
 
@@ -72,7 +72,7 @@ This document is intended for the IT Architecture Review Board (ARB), data platf
 | Acronym | Definition |
 |---|---|
 | EDAP | Enterprise Data Analytics Platform |
-| SDP | Streaming Declarative Pipeline (Lakeflow) |
+| SDP | Spark Declarative Pipeline (Lakeflow) |
 | DQ | Data Quality |
 | SCD | Slowly Changing Dimension |
 | CDC | Change Data Capture |
@@ -111,7 +111,7 @@ The framework operates across the EDAP medallion architecture, processing data t
 - **Gold (Exploratory Zone):** Wide, denormalised datasets for data science and ad hoc analysis.
 - **Gold (BI Zone):** Dimensional models (facts and dimensions) with KPIs for BI and reporting.
 
-The framework provides a single configurable engine that handles the pipeline processing for each zone transition. The engine's behaviour is parameterised by the zone transition being performed â the same framework code executes different transformation, DQ, audit, and history logic depending on the configured source and target zones.
+The framework provides a single configurable engine that handles the pipeline processing for each zone transition. The engine's behaviour is parameterised by the zone transition being performed; the same framework code executes different transformation, DQ, audit, and history logic depending on the configured source and target zones.
 
 ### 2.2 Unity Catalog Namespace Convention
 
@@ -119,14 +119,14 @@ The framework must adhere to the EDAP naming conventions for Unity Catalog objec
 
 | Zone Transition | Source Pattern | Target Pattern |
 |---|---|---|
-| Raw â Base | `<env>_bronze.<source_system>_raw.<entity>` | `<env>_silver.<source_system>_base.<entity>` |
-| Base â Enriched | `<env>_silver.<source_system>_base.<entity>` | `<env>_silver.<domain>_enriched.<entity>` |
-| Enriched â BI | `<env>_silver.<domain>_enriched.<entity>` | `<env>_gold.<domain>_bi.<entity>` |
-| Enriched â Exploratory | `<env>_silver.<domain>_enriched.<entity>` | `<env>_gold.<domain>_exploratory.<entity>` |
+| Raw to Base | `<env>_bronze.<source_system>_raw.<entity>` | `<env>_silver.<source_system>_base.<entity>` |
+| Base to Enriched | `<env>_silver.<source_system>_base.<entity>` | `<env>_silver.<domain>_enriched.<entity>` |
+| Enriched to BI | `<env>_silver.<domain>_enriched.<entity>` | `<env>_gold.<domain>_bi.<entity>` |
+| Enriched to Exploratory | `<env>_silver.<domain>_enriched.<entity>` | `<env>_gold.<domain>_exploratory.<entity>` |
 
 ### 2.3 Pipeline Technology
 
-The framework must be implemented using Databricks Lakeflow Streaming Declarative Pipelines (formerly Delta Live Tables). Pipeline logic is expressed using `CREATE STREAMING TABLE`, `CREATE MATERIALIZED VIEW`, and the AUTO CDC APIs in SQL or Python â not custom YAML or imperative Spark code.
+The framework must be implemented using Databricks Lakeflow Spark Declarative Pipelines (formerly Delta Live Tables). Pipeline logic is expressed using `CREATE STREAMING TABLE`, `CREATE MATERIALIZED VIEW`, and the AUTO CDC APIs in SQL or Python, not custom YAML or imperative Spark code.
 
 **API migration note:** Databricks now recommends the AUTO CDC APIs (`AUTO CDC INTO`, `create_auto_cdc_flow`) as replacements for the APPLY CHANGES APIs. Both have the same syntax. The EDAP framework should target the AUTO CDC APIs for new development while remaining compatible with environments where only the APPLY CHANGES APIs are available.
 
@@ -137,31 +137,31 @@ The framework must be implemented using Databricks Lakeflow Streaming Declarativ
 - The choice between serverless and classic should be configurable per data flow group in the Dataflowspec, defaulting to serverless.
 - Cost observability (NFR-CST-01, NFR-CST-02) applies equally to both compute models.
 
-**Pipeline chaining constraint:** Lakeflow SDP currently does not allow a streaming table created via AUTO CDC (SCD Type 2) to be used as a streaming source in a downstream pipeline without enabling `skipChangeCommits`. This constraint affects Base â Enriched pipeline chaining where the Base Zone table uses SCD Type 2. The framework must account for this â either by setting `skipChangeCommits`, reading the target as a batch source, or structuring pipelines to avoid streaming from SCD Type 2 targets.
+**Pipeline chaining constraint:** Lakeflow SDP currently does not allow a streaming table created via AUTO CDC (SCD Type 2) to be used as a streaming source in a downstream pipeline without enabling `skipChangeCommits`. This constraint affects Base to Enriched pipeline chaining where the Base Zone table uses SCD Type 2. The framework must account for this, either by setting `skipChangeCommits`, reading the target as a batch source, or structuring pipelines to avoid streaming from SCD Type 2 targets.
 
 ### 2.4 Raw Zone Ingestion Patterns
 
-The framework must accommodate variation in how data arrives in the Raw Zone, as this affects the transformation logic required for the Raw â Base transition:
+The framework must accommodate variation in how data arrives in the Raw Zone, as this affects the transformation logic required for the Raw to Base transition:
 
 | Ingestion Method | Typical Column Types | File Audit Columns | Examples |
 |---|---|---|---|
 | Auto Loader (file-based) | STRING, VARIANT, BINARY | Present (edap.file_name, edap.file_path, etc.) | CSV, JSON, Parquet, XML file drops |
-| Lakeflow Connect (managed connector) | Native types from source schema (INTEGER, TIMESTAMP, DECIMAL, etc.) | Not present â no file-based origin | SAP, Salesforce, database CDC connectors |
+| Lakeflow Connect (managed connector) | Native types from source schema (INTEGER, TIMESTAMP, DECIMAL, etc.) | Not present; no file-based origin | SAP, Salesforce, database CDC connectors |
 | Streaming / event-based | STRING or VARIANT (serialised payloads) | May or may not be present | Kafka, Event Hubs, SCADA telemetry |
 
 The framework's type casting logic must introspect the source schema at runtime and apply casting only where the source type differs from the configured target type, rather than unconditionally casting all columns from STRING.
 
-### 2.5 Design Decision â Internal Pipeline Staging vs Separate Zone
+### 2.5 Design Decision: Internal Pipeline Staging vs Separate Zone
 
 A common pattern in medallion architectures is to introduce an intermediate zone (sometimes called "Standardised" or "Conformed") between Raw and Base to handle structural transformations such as flattening nested JSON/VARIANT payloads, exploding arrays, and normalising field names before DQ and SCD processing.
 
 This framework does **not** introduce a separate published zone for this purpose. The rationale is:
 
-- **Many sources arrive flat or natively typed.** Entities ingested via Lakeflow Connect, flat CSV/Parquet files, or tabular CDC streams require no structural transformation. A separate zone would be a pass-through copy for these entities â adding storage cost, latency, governance overhead, and lineage noise with no value.
+- **Many sources arrive flat or natively typed.** Entities ingested via Lakeflow Connect, flat CSV/Parquet files, or tabular CDC streams require no structural transformation. A separate zone would be a pass-through copy for these entities, adding storage cost, latency, governance overhead, and lineage noise with no value.
 - **The Raw Zone already provides the replay checkpoint.** Since Bronze is immutable and append-only, any reprocessing can replay from Raw. A separate intermediate zone does not add meaningful replay capability beyond what Raw already provides.
 - **A separate zone increases the configuration and operational surface.** Every entity would require an additional target table, retention policy, monitoring configuration, and access control definition, even when no structural transformation is needed.
 
-Instead, the framework supports **internal pipeline staging** â where entities that require complex structural transformation (deep nesting, array explosion, multi-level flattening) can declare intermediate `CREATE STREAMING TABLE` steps *within the same SDP pipeline*. These internal staging tables are managed within the pipeline graph and visible in Lakeflow lineage, but are not published to consumers.
+Instead, the framework supports **internal pipeline staging**, where entities that require complex structural transformation (deep nesting, array explosion, multi-level flattening) can declare intermediate `CREATE STREAMING TABLE` steps *within the same SDP pipeline*. These internal staging tables are managed within the pipeline graph and visible in Lakeflow lineage, but are not published to consumers.
 
 ### 2.6 Relationship to DLT-META
 
@@ -186,7 +186,7 @@ DLT-META is an open-source metadata-driven framework from Databricks Labs that a
 - **EDAP-specific audit columns.** DLT-META does not prescribe edap_-prefixed audit columns, effectivity tracking conventions, or SHA-512 hash-based change detection.
 - **Per-record DQ annotation model.** DLT-META uses native Lakeflow expectations which operate at the pipeline level (pass/warn/fail/drop/quarantine). EDAP requires per-record DQ annotation columns (dq_status, dq_errors, dq_warnings, dq_checked_ts) that propagate all records with their individual quality assessment.
 - **Column-level configuration depth.** DLT-META's Silver transformation uses SQL `select_exp` arrays applied via `selectExpr()`. EDAP requires richer column-level configuration including per-column type casting, null handling rules, flatten paths, and per-column DQ rules.
-- **Configuration validation.** DLT-META's onboarding process has limited schema validation â malformed JSON can produce unclear runtime errors.
+- **Configuration validation.** DLT-META's onboarding process has limited schema validation; malformed JSON can produce unclear runtime errors.
 - **Unity Catalog tagging.** DLT-META does not manage UC tags.
 - **Multi-zone scope.** DLT-META covers Bronze and Silver. EDAP requires the same engine to handle Silver-to-Gold transitions.
 - **Table and column comments.** DLT-META supports table comments; the EDAP framework should extend this to column-level comments for Unity Catalog discoverability.
@@ -210,7 +210,7 @@ These requirements apply to the framework engine regardless of which zone transi
 | FR-CFG-04 | The configuration shall support environment parameterisation (dev, test, prod) to resolve Unity Catalog catalog names dynamically, using environment-suffixed properties (e.g. `source_catalog_dev`, `source_catalog_prod`) or a templating mechanism. | Must Have |
 | FR-CFG-05 | The framework shall support a configuration versioning mechanism so that changes to entity mappings are auditable and traceable. The Dataflowspec table shall include version, import_author, and import_timestamp metadata. | Must Have |
 | FR-CFG-06 | The configuration shall support defining the source extract pattern for each entity: full extract (snapshot), incremental (CDC/append), or event-based. | Must Have |
-| FR-CFG-07 | The configuration shall support specifying the ingestion method (file_based, managed_connector, streaming) for Raw â Base transitions, to determine which audit columns to expect and whether type casting is required. | Must Have |
+| FR-CFG-07 | The configuration shall support specifying the ingestion method (file_based, managed_connector, streaming) for Raw to Base transitions, to determine which audit columns to expect and whether type casting is required. | Must Have |
 | FR-CFG-08 | The configuration shall support a data flow grouping mechanism (`data_flow_group`) that allows multiple entities to be assigned to the same Lakeflow Declarative Pipeline, enabling co-execution while preserving the option for per-entity pipeline isolation where required. | Must Have |
 | FR-CFG-09 | The framework shall validate the configuration schema at onboarding time (required fields, correct types, referential integrity between entity and column definitions, valid zone transition types). Malformed or incomplete configuration shall produce clear, actionable error messages and shall not generate invalid pipelines. | Must Have |
 | FR-CFG-10 | The configuration shall support specifying reader options per entity (e.g. multiline, header, rescued data column, infer column types) to be passed through to the underlying Spark reader or Auto Loader configuration. | Should Have |
@@ -225,8 +225,8 @@ These requirements apply to the framework engine regardless of which zone transi
 | ID | Requirement | Priority |
 |---|---|---|
 | FR-TYP-01 | The framework shall introspect the source table schema at pipeline initialisation and determine which columns require type casting based on the difference between the source type and the configured target type. | Must Have |
-| FR-TYP-02 | Where the source column type already matches the configured target type (e.g. connector-ingested data or Base â Enriched transitions), the framework shall pass the column through without casting. | Must Have |
-| FR-TYP-03 | Where the source column type differs from the target type, the framework shall cast the column and handle cast failures gracefully â records with cast errors shall be annotated via DQ columns and propagated, not dropped. | Must Have |
+| FR-TYP-02 | Where the source column type already matches the configured target type (e.g. connector-ingested data or Base to Enriched transitions), the framework shall pass the column through without casting. | Must Have |
+| FR-TYP-03 | Where the source column type differs from the target type, the framework shall cast the column and handle cast failures gracefully. Records with cast errors shall be annotated via DQ columns and propagated, not dropped. | Must Have |
 | FR-TYP-04 | The framework shall flatten nested VARIANT/JSON structures into individual typed columns as defined in the configuration mapping. | Must Have |
 | FR-TYP-05 | The framework shall support configurable null handling rules per column (e.g. replace null with default value, flag as DQ warning, flag as DQ error). | Must Have |
 | FR-TYP-06 | The framework shall apply standardised field naming conventions to all output columns, converting source field names to consistent, clear, and descriptive names as specified in configuration. | Must Have |
@@ -235,7 +235,7 @@ These requirements apply to the framework engine regardless of which zone transi
 | FR-TYP-09 | Internal staging tables shall only be created for entities where the configuration explicitly declares them. Flat or simple entities proceed directly through the core transformation steps. | Must Have |
 | FR-TYP-10 | Internal staging tables shall be visible in Lakeflow pipeline lineage for engineer inspection but shall not appear in consumer-facing Unity Catalog schemas. | Should Have |
 | FR-TYP-11 | The framework shall support a `_rescued_data` column pattern. Where Auto Loader captures unmatched columns into a rescue column, the framework shall propagate this column to the target (or flag it via DQ annotation) rather than silently dropping it. | Should Have |
-| FR-TYP-12 | The framework shall support configurable SQL `select` expressions per entity (analogous to DLT-META's `select_exp` array), enabling transformation logic beyond simple column mapping. Multiple `select_exp` arrays shall be supported where multi-step `selectExpr` evaluation is needed (e.g. explode followed by column selection â a known DLT-META limitation). | Should Have |
+| FR-TYP-12 | The framework shall support configurable SQL `select` expressions per entity (analogous to DLT-META's `select_exp` array), enabling transformation logic beyond simple column mapping. Multiple `select_exp` arrays shall be supported where multi-step `selectExpr` evaluation is needed (e.g. explode followed by column selection, a known DLT-META limitation). | Should Have |
 | FR-TYP-13 | The framework shall support optional `where_clause` filter conditions per entity. Where applied, filtered records shall be logged for auditability. | Could Have |
 | FR-TYP-14 | The framework shall support column-level comments in configuration, to be published to Unity Catalog for data catalogue discoverability. | Should Have |
 
@@ -323,7 +323,7 @@ These requirements apply to the framework engine regardless of which zone transi
 
 The generic engine (Section 3) provides the configurable machinery. This section defines the specific behaviours, audit columns, and constraints that apply to each zone transition. These rules are encoded as defaults within the framework for each zone transition type.
 
-### 4.1 Raw â Base (Bronze â Silver)
+### 4.1 Raw to Base (Bronze to Silver)
 
 **Delivery priority: Phase 1**
 
@@ -336,7 +336,7 @@ This is the most standardised and highest-volume transition. It transforms loose
 - All records propagate regardless of DQ status (annotate, never filter).
 - Structural flattening of nested payloads is common.
 - Deduplication is based on edap_hash comparison.
-- Business semantics are retained â no business logic is applied beyond cleansing and standardisation.
+- Business semantics are retained; no business logic is applied beyond cleansing and standardisation.
 - For snapshot sources without CDC feeds, `create_auto_cdc_from_snapshot_flow` is the preferred mechanism.
 
 **Source audit columns (carried forward where present):**
@@ -366,7 +366,7 @@ Note: File-related audit columns (edap.file_name, edap.file_path, edap.file_size
 
 **Target tags (defaults):** medallion_layer = silver, medallion_sublayer = base, retention_days = (from config), data_type = (from config).
 
-### 4.2 Base â Enriched (Silver â Silver)
+### 4.2 Base to Enriched (Silver to Silver)
 
 **Delivery priority: Phase 2**
 
@@ -374,7 +374,7 @@ Integrates Base Zone data from multiple source systems and applies business logi
 
 **Zone-specific characteristics:**
 
-- Source data is already typed and validated â type casting is generally not required.
+- Source data is already typed and validated, so type casting is generally not required.
 - Joins across multiple Base Zone tables are the primary transformation pattern.
 - SCD Type 2 effectivity is calculated from Base Zone source records.
 - DQ rules focus on cross-source consistency, referential integrity, and business rule compliance.
@@ -385,7 +385,7 @@ Integrates Base Zone data from multiple source systems and applies business logi
 
 **Target tags (defaults):** medallion_layer = silver, medallion_sublayer = enriched, retention_days = (from config), data_type = (from config).
 
-### 4.3 Enriched â BI (Silver â Gold)
+### 4.3 Enriched to BI (Silver to Gold)
 
 **Delivery priority: Phase 3**
 
@@ -402,7 +402,7 @@ Transforms Enriched Zone data into dimensional models (facts, dimensions, metric
 
 **Target tags (defaults):** medallion_layer = gold, medallion_sublayer = bi, retention_days = (from config).
 
-### 4.4 Enriched â Exploratory (Silver â Gold)
+### 4.4 Enriched to Exploratory (Silver to Gold)
 
 **Delivery priority: Phase 3**
 
@@ -410,9 +410,9 @@ Produces wide, denormalised datasets optimised for data science, exploration, an
 
 **Zone-specific characteristics:**
 
-- Wide tables combining multiple subject areas â minimal joins required downstream.
+- Wide tables combining multiple subject areas, with minimal joins required downstream.
 - Schema evolution is more permissive than other zones.
-- DQ is lighter â minimum quality thresholds rather than strict validation.
+- DQ is lighter; minimum quality thresholds rather than strict validation.
 - Liquid clustering and Z-ordering are critical for performance.
 - edap_ system columns may be carried forward or omitted depending on use case.
 
@@ -585,7 +585,7 @@ The following describes the logical processing sequence. The same sequence appli
 | 1 | **Read Source** | Read from the source Delta table using streaming or batch read. Apply reader options. Extract Auto Loader `_metadata` columns if configured. |
 | 2 | **Schema Introspection** | Inspect source schema. Compare against configured target types to build a casting plan. For transitions where types already match, casting is skipped. |
 | 3 | **Flatten & Rename** | Flatten nested structures and rename columns. For complex entities, writes to internal staging tables. May be a no-op for non-Raw sources. |
-| 4 | **Type Cast** | Cast columns where types differ. No-op for natively typed sources or Silver â Gold transitions. Capture cast failures in DQ annotations. |
+| 4 | **Type Cast** | Cast columns where types differ. No-op for natively typed sources or Silver to Gold transitions. Capture cast failures in DQ annotations. |
 | 5 | **Custom Transforms** | Apply configured SQL select expressions and/or custom Python transformation functions in configured execution order. |
 | 6 | **Null Handling** | Apply null handling rules per column. |
 | 7 | **DQ Evaluation** | Evaluate DQ rules. Populate per-record annotation columns. Apply Lakeflow expectations in parallel. Route to quarantine if configured. All records propagate to main target. |
@@ -600,9 +600,9 @@ The following describes the logical processing sequence. The same sequence appli
 
 ## 8. Acceptance Criteria
 
-### Phase 1 â Raw â Base
+### Phase 1: Raw to Base
 
-- A new source entity can be onboarded by adding a configuration entry and running the onboarding workflow â no new pipeline code required.
+- A new source entity can be onboarded by adding a configuration entry and running the onboarding workflow. No new pipeline code required.
 - The framework correctly handles both file-ingested (STRING/VARIANT) and connector-ingested (natively typed) source entities.
 - All Base Zone audit columns are correctly populated for every record.
 - All Base Zone DQ columns are correctly populated. No records filtered or quarantined by default.
@@ -621,15 +621,15 @@ The following describes the logical processing sequence. The same sequence appli
 - Snapshot sources are processable via `create_auto_cdc_from_snapshot_flow` without manual diff logic.
 - The framework is deployable via Databricks Asset Bundles.
 
-### Phase 2 â Base â Enriched
+### Phase 2: Base to Enriched
 
-- The same framework engine processes Base â Enriched transitions using configuration.
+- The same framework engine processes Base to Enriched transitions using configuration.
 - Custom transformation hooks and SQL select expressions support multi-table joins and business logic.
 - Enriched Zone audit columns are correctly populated, with effectivity derived from Base Zone source records.
 - DQ rules covering cross-source consistency and referential integrity are evaluated and annotated.
 - The `skipChangeCommits` constraint is handled correctly when reading from SCD Type 2 Base Zone targets.
 
-### Phase 3 â Enriched â Gold
+### Phase 3: Enriched to Gold
 
 - The framework produces BI Zone dimensional models with surrogate keys and business-friendly naming.
 - The framework produces Exploratory Zone wide tables with appropriate clustering.
@@ -643,7 +643,7 @@ The following describes the logical processing sequence. The same sequence appli
 | ID | Question | Decision Owner | Status |
 |---|---|---|---|
 | OQ-01 | Should the EDAP framework adopt DLT-META as its foundation, use it as a reference architecture, or build independently? See Appendix A for the full gap analysis and adoption strategy options. | Architecture / Platform Team | Open |
-| OQ-02 | How should the framework reconcile Lakeflow AUTO CDC managed columns (`__START_AT`, `__END_AT`) with the EDAP convention (edap_eff_from, edap_eff_to, edap_is_current)? Options: (a) map in post-processing, (b) custom SCD logic bypassing AUTO CDC, (c) carry both. **Recommendation:** Option (a) â map Lakeflow-managed columns to EDAP columns in a post-processing view or within the pipeline definition. Retain `__START_AT` and `__END_AT` as the physical columns managed by Lakeflow AUTO CDC, and expose `edap_eff_from`, `edap_eff_to`, and `edap_is_current` as logical columns via a view layer or computed columns in the pipeline output step. This preserves Lakeflow's native SCD management (avoiding the maintenance burden of option (b)) while presenting a consistent EDAP interface to consumers. The view layer also provides a natural point for deriving `edap_is_current` (which Lakeflow does not natively manage) from `__END_AT IS NULL` or equivalent logic. | Architecture / Data Engineering | Open â Recommendation provided |
+| OQ-02 | How should the framework reconcile Lakeflow AUTO CDC managed columns (`__START_AT`, `__END_AT`) with the EDAP convention (edap_eff_from, edap_eff_to, edap_is_current)? Options: (a) map in post-processing, (b) custom SCD logic bypassing AUTO CDC, (c) carry both. **Recommendation:** Option (a), map Lakeflow-managed columns to EDAP columns in a post-processing view or within the pipeline definition. Retain `__START_AT` and `__END_AT` as the physical columns managed by Lakeflow AUTO CDC, and expose `edap_eff_from`, `edap_eff_to`, and `edap_is_current` as logical columns via a view layer or computed columns in the pipeline output step. This preserves Lakeflow's native SCD management (avoiding the maintenance burden of option (b)) while presenting a consistent EDAP interface to consumers. The view layer also provides a natural point for deriving `edap_is_current` (which Lakeflow does not natively manage) from `__END_AT IS NULL` or equivalent logic. | Architecture / Data Engineering | Open: Recommendation provided |
 | OQ-03 | How should the framework handle schema evolution in the Raw Zone? Automatic propagation or explicit configuration required? | Architecture / Data Engineering | Open |
 | OQ-04 | What is the DQ threshold for pipeline alerting? Configurable per entity? | Data Governance / Product Owner | Open |
 | OQ-05 | Should the framework support partial reprocessing (specific date ranges or batches) or only full entity reprocessing? | Data Engineering | Open |
@@ -653,13 +653,13 @@ The following describes the logical processing sequence. The same sequence appli
 | OQ-09 | How should the Protected Zone integration work for PI-containing entities? | Security / Data Governance | Open |
 | OQ-10 | For Lakeflow Connect-ingested entities, should the framework validate source schema against configuration and fail fast on mismatches? | Architecture / Data Engineering | Open |
 | OQ-11 | What is the retention/cleanup policy for internal staging tables? | Architecture / Platform Team | Open |
-| OQ-12 | For Base â Enriched joins across multiple Base Zone tables, how should join definitions be expressed in configuration? | Architecture / Data Engineering | Open |
+| OQ-12 | For Base to Enriched joins across multiple Base Zone tables, how should join definitions be expressed in configuration? | Architecture / Data Engineering | Open |
 | OQ-13 | For BI Zone dimensional models, should surrogate key generation be managed by the framework or delegated to transformation logic? | Architecture / Data Engineering | Open |
 | OQ-14 | Should entities using the quarantine pattern also retain annotated records in the main target (quarantine as copy) or divert them (quarantine as removal)? | Data Governance / Architecture | Open |
 
 ---
 
-## Appendix A â DLT-META Gap Analysis
+## Appendix A: DLT-META Gap Analysis
 
 This appendix provides a structured comparison between DLT-META capabilities and EDAP requirements to inform the build-vs-adopt decision (OQ-01).
 
@@ -667,30 +667,30 @@ This appendix provides a structured comparison between DLT-META capabilities and
 
 | Capability | DLT-META | EDAP Requirement | Gap |
 |---|---|---|---|
-| Metadata-driven pipeline generation | Yes â Dataflowspec pattern | FR-CFG-01 to FR-CFG-03 | Aligned. Adopt the Dataflowspec pattern. |
-| Data flow grouping | Yes â `data_flow_group` | FR-CFG-08 | Aligned. |
-| Environment parameterisation | Yes â `{env}` suffix | FR-CFG-04 | Aligned. |
-| Configuration validation | Limited â runtime errors on bad JSON | FR-CFG-09 | **Gap.** EDAP needs rigorous pre-validation. |
-| CDC / SCD Type 1 & 2 | Yes â AUTO CDC, snapshot CDC | FR-SCD-01 to FR-SCD-09, FR-DDP-03, FR-DDP-06 | Partial. DLT-META uses `__START_AT`/`__END_AT`; EDAP needs edap_ column mapping. |
-| DQ expectations | Yes â expect, expect_or_fail, expect_or_drop, expect_or_quarantine | FR-DQ-01 to FR-DQ-10 | **Gap.** Pipeline-level only. EDAP needs per-record annotation. |
-| Quarantine tables | Yes â Bronze and Silver (v0.0.10+) | FR-DQ-08 | Aligned (as optional pattern). |
-| Custom transformations | Yes â Python functions, ordered execution | FR-TYP-12, NFR-MNT-02 | Aligned. |
-| SQL select expressions | Yes â `select_exp` array | FR-TYP-12 | Partial. Single-stage only; EDAP needs multi-stage. |
-| Append flows | Yes â `append_flow` API | FR-DDP-07 | Aligned. |
-| Sink API | Yes â Delta and Kafka | FR-SNK-01 | Aligned. |
-| Liquid clustering | Yes â Bronze, Quarantine, Silver | NFR-SCL-04 | Aligned. |
-| Auto Loader metadata | Yes â `source_metadata` config | FR-AUD-07 | Aligned. |
-| Table properties | Yes â `table_properties` map | FR-CFG-13 | Aligned. |
-| Table comments | Yes â `table_comment` properties | FR-CFG-14 | Aligned. |
+| Metadata-driven pipeline generation | Yes: Dataflowspec pattern | FR-CFG-01 to FR-CFG-03 | Aligned. Adopt the Dataflowspec pattern. |
+| Data flow grouping | Yes: `data_flow_group` | FR-CFG-08 | Aligned. |
+| Environment parameterisation | Yes: `{env}` suffix | FR-CFG-04 | Aligned. |
+| Configuration validation | Limited: runtime errors on bad JSON | FR-CFG-09 | **Gap.** EDAP needs rigorous pre-validation. |
+| CDC / SCD Type 1 & 2 | Yes: AUTO CDC, snapshot CDC | FR-SCD-01 to FR-SCD-09, FR-DDP-03, FR-DDP-06 | Partial. DLT-META uses `__START_AT`/`__END_AT`; EDAP needs edap_ column mapping. |
+| DQ expectations | Yes: expect, expect_or_fail, expect_or_drop, expect_or_quarantine | FR-DQ-01 to FR-DQ-10 | **Gap.** Pipeline-level only. EDAP needs per-record annotation. |
+| Quarantine tables | Yes: Bronze and Silver (v0.0.10+) | FR-DQ-08 | Aligned (as optional pattern). |
+| Custom transformations | Yes: Python functions, ordered execution | FR-TYP-12, NFR-MNT-02 | Aligned. |
+| SQL select expressions | Yes: `select_exp` array | FR-TYP-12 | Partial. Single-stage only; EDAP needs multi-stage. |
+| Append flows | Yes: `append_flow` API | FR-DDP-07 | Aligned. |
+| Sink API | Yes: Delta and Kafka | FR-SNK-01 | Aligned. |
+| Liquid clustering | Yes: Bronze, Quarantine, Silver | NFR-SCL-04 | Aligned. |
+| Auto Loader metadata | Yes: `source_metadata` config | FR-AUD-07 | Aligned. |
+| Table properties | Yes: `table_properties` map | FR-CFG-13 | Aligned. |
+| Table comments | Yes: `table_comment` properties | FR-CFG-14 | Aligned. |
 | UC tagging | No | FR-TAG-01 to FR-TAG-03 | **Gap.** |
-| EDAP audit columns | No â no `edap_` convention | FR-AUD-01 to FR-AUD-08 | **Gap.** |
-| Per-column configuration | No â entity-level SQL only | FR-TYP-01 to FR-TYP-06 | **Gap.** |
-| Hash-based deduplication | No â relies on CDC/SCD | FR-DDP-01 | **Gap.** |
-| Multi-zone (Gold) | No â Bronze and Silver only | Section 4.3, 4.4 | **Gap.** |
+| EDAP audit columns | No: no `edap_` convention | FR-AUD-01 to FR-AUD-08 | **Gap.** |
+| Per-column configuration | No: entity-level SQL only | FR-TYP-01 to FR-TYP-06 | **Gap.** |
+| Hash-based deduplication | No: relies on CDC/SCD | FR-DDP-01 | **Gap.** |
+| Multi-zone (Gold) | No: Bronze and Silver only | Section 4.3, 4.4 | **Gap.** |
 | DABs deployment | Yes | NFR-MNT-05 | Aligned. |
-| CLI tooling | Yes â `databricks labs dlt-meta` | NFR-MNT-06 | Aligned. |
+| CLI tooling | Yes: `databricks labs dlt-meta` | NFR-MNT-06 | Aligned. |
 | Lakehouse App UI | Yes | NFR-MNT-06 | Aligned (bonus). |
-| Formal SLA / support | No â Databricks Labs, AS-IS | All NFRs | **Risk.** |
+| Formal SLA / support | No: Databricks Labs, AS-IS | All NFRs | **Risk.** |
 
 ### A.2 Adoption Strategy Options
 
@@ -706,7 +706,7 @@ This appendix provides a structured comparison between DLT-META capabilities and
 
 | Version | Date | Author | Description |
 |---|---|---|---|
-| 0.1 | March 2026 | IT Architecture & Strategy | Initial draft for ARB review (scoped to Raw â Base). |
+| 0.1 | March 2026 | IT Architecture & Strategy | Initial draft for ARB review (scoped to Raw to Base). |
 | 0.2 | March 2026 | IT Architecture & Strategy | Incorporated DLT-META review findings: data flow grouping, config validation, SCD Type 1, CDC configuration, append flows, quarantine option, rescued data, select expressions, DABs support. |
 | 0.3 | March 2026 | IT Architecture & Strategy | Broadened scope to EDAP Configurable Pipeline Framework covering all zone transitions. Restructured into generic engine requirements and zone-specific processing rules. Added phased delivery and acceptance criteria. |
 | 0.4 | March 2026 | IT Architecture & Strategy | Comprehensive quality uplift following deep DLT-META analysis. Key additions: AUTO CDC API migration guidance and pipeline chaining constraints (skipChangeCommits); Dataflowspec two-stage pattern promoted to Must Have; per-record DQ annotation clarified alongside pipeline expectations; source_metadata extraction; snapshot CDC via create_auto_cdc_from_snapshot_flow; initial hydration pattern; __START_AT/__END_AT reconciliation requirement (OQ-02); multi-stage select_exp support; error handling and recovery section (5.7); DQ event log metrics; table and column comments; integration test patterns; Sink API section (3.8); referenced documents section; full DLT-META gap analysis appendix with feature alignment matrix and adoption strategy options. |
