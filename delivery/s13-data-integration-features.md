@@ -6,24 +6,24 @@
 - `specifications/edap-pipeline-framework.md` — Metadata-driven framework, Dataflowspec, DLT-META, zone transitions, DQ expectations
 - `platform/medallion-architecture.md` — Landing Zone, Raw Zone, Bronze/Silver/Gold layers, quarantine pattern, Auto Loader
 - `governance/edap-tagging-strategy.md` — 4-layer tagging model, PI tags, classification lifecycle
-- `platform/edap-access-model.md` — Domain catalogs, Unity Catalog Volumes, Landing Zone implementation
+- `platform/edap-access-model.md` — Domain catalogues, Unity Catalog Volumes, Landing Zone implementation
 - `platform/enterprise-data-models.md` — Data contracts, domain-aligned models
 
 ---
 
-## Feature S13-F1: Integration Architecture Design
+## Feature S13-F1: Every Source System Has a Documented, Costed Connectivity Path
 
-**Description:** Design the integration architecture for EDAP, documenting source system connectivity options, evaluating Lakeflow Connect managed connectors, inventorying all available connectors and their limitations, and defining the connectivity approach for each initial data source.
+**Description:** Solution architects and data engineers can look up any source system and immediately see how it connects to EDAP — which connector to use, what it costs, what its limitations are, and whether it needs custom ingestion — so delivery teams make informed choices without trial-and-error and procurement surprises are eliminated before implementation begins.
 
 ### User Stories
 
 | Story ID | As a... | I want to... | So that... |
 |---|---|---|---|
-| S13-F1-US01 | Solution Architect | document the available connection methods for each data source type (databases, files, APIs, streaming) | the delivery team has a clear reference for how each source system connects to EDAP |
-| S13-F1-US02 | Solution Architect | evaluate Lakeflow Connect managed connectors for applicability to WC's source systems (SAP, Salesforce, databases) | I can recommend managed connectors where they meet requirements and identify where custom ingestion is needed |
+| S13-F1-US01 | Solution Architect | look up the documented connection method for any data source type (database, file, API, streaming) | the delivery team has a clear reference for how each source system connects to EDAP |
+| S13-F1-US02 | Solution Architect | see an evaluation of Lakeflow Connect managed connectors for WC's source systems (SAP, Salesforce, databases) | I can recommend managed connectors where they meet requirements and identify where custom ingestion is needed |
 | S13-F1-US03 | Data Engineer | access a connector inventory listing capabilities, limitations, licensing requirements, and associated costs | I can select the appropriate connector for each source without trial-and-error |
 | S13-F1-US04 | Platform Administrator | understand external connector licensing requirements and costs | budget and procurement decisions are informed before implementation begins |
-| S13-F1-US05 | Solution Architect | document known limitations of each connectivity method | the team can plan workarounds and avoid discovering limitations during implementation |
+| S13-F1-US05 | Solution Architect | review documented limitations of each connectivity method | the team can plan workarounds and avoid discovering limitations during implementation |
 
 ### Acceptance Criteria
 
@@ -43,9 +43,9 @@
 
 ---
 
-## Feature S13-F2: Batch Ingestion Framework
+## Feature S13-F2: New Source Entities Onboarded via Configuration, Not Code
 
-**Description:** Implement a metadata-driven batch ingestion framework aligned to the pipeline framework specification (EDAP-FWK-001) that enables bulk ingestion of source system data without writing per-table code, using configuration-driven Dataflowspec patterns.
+**Description:** Data engineers can onboard a new source entity by adding a configuration entry — not by writing custom Spark or SQL — so bulk ingestion scales through configuration, data quality rules are enforced at every zone transition, and the platform team can monitor ingestion health from a single observability layer.
 
 ### User Stories
 
@@ -67,7 +67,7 @@
 | S13-F2-AC04 | DQ expectations are configured for the Bronze Processed zone | a record fails a DQ expectation | the record is routed to the quarantine table with failure metadata (rule name, failed value, timestamp, source batch reference) |
 | S13-F2-AC05 | Data flow grouping is configured | 10 source entities from the same system are grouped into a single pipeline | all 10 entities are processed within a single Lakeflow SDP execution, with individual entity failures not blocking other entities in the group |
 | S13-F2-AC06 | EDAP audit columns are configured | a batch ingestion pipeline writes to the Raw Zone | each record includes `edp_batch` (epoch milliseconds) and `edp_hash` (SHA-512 hash of non-edp fields) per the pipeline framework spec |
-| S13-F2-AC07 | Pipeline observability is enabled | the ingestion pipeline completes (success or failure) | pipeline metrics (rows processed, duration, DQ pass/fail counts, error details) are available in Lakeflow monitoring and `prod_platform` catalog |
+| S13-F2-AC07 | Pipeline observability is enabled | the ingestion pipeline completes (success or failure) | pipeline metrics (rows processed, duration, DQ pass/fail counts, error details) are available in Lakeflow monitoring and `prod_platform` catalogue |
 
 ### Technical Notes
 - Framework must align to the pipeline framework spec (EDAP-FWK-001): Dataflowspec pattern, data flow grouping, zone-specific processing rules.
@@ -78,9 +78,9 @@
 
 ---
 
-## Feature S13-F3: CDC and Incremental Ingestion
+## Feature S13-F3: Database Changes Captured and Reflected in EDAP Within Minutes
 
-**Description:** Implement Change Data Capture (CDC) and incremental ingestion patterns using Lakeflow AUTO CDC, supporting SCD Type 1 and Type 2 processing, out-of-order event handling, and delete detection for transactional source systems.
+**Description:** Inserts, updates, and deletes from transactional source systems are captured incrementally — using Lakeflow AUTO CDC for native change feeds or snapshot comparison for systems without CDC support — so the Silver Base zone reflects current and historical source state without full-table reloads, with out-of-order events handled gracefully and both soft and hard deletes detected.
 
 ### User Stories
 
@@ -112,9 +112,9 @@
 
 ---
 
-## Feature S13-F4: Streaming Ingestion
+## Feature S13-F4: Real-Time Event Data Available as Queryable Tables
 
-**Description:** Implement streaming ingestion for real-time data sources using Databricks streaming tables, event-driven triggers, and continuous processing to support near-real-time analytics and operational use cases.
+**Description:** Real-time data from streaming sources (Kafka, Event Hubs, SCADA telemetry) is continuously ingested into queryable Delta tables — with the same DQ expectations and quarantine handling as batch data — so analysts and operational systems can access near-real-time information within minutes of generation at source.
 
 ### User Stories
 
@@ -144,9 +144,9 @@
 
 ---
 
-## Feature S13-F5: Sensitive Data Identification
+## Feature S13-F5: PI and Sensitive Data Identified and Tagged Automatically During Ingestion
 
-**Description:** Implement automated Personal Information (PI) detection using Unity Catalog Data Classification, apply governed tags per the tagging strategy, and integrate classification results with ABAC access control policies.
+**Description:** Newly ingested tables are automatically scanned for Personal Information using Unity Catalog Data Classification, with results presented to domain stewards for review and approval — so PI columns are tagged and ABAC-protected as part of the standard onboarding workflow, not as an afterthought, and the Data Protection Officer has a complete PI inventory across all production catalogues.
 
 ### User Stories
 
@@ -155,17 +155,17 @@
 | S13-F5-US01 | Domain Data Steward | have PI automatically detected in newly ingested tables using Unity Catalog Data Classification | I receive recommendations for PI tagging rather than manually inspecting every column |
 | S13-F5-US02 | Domain Data Steward | review and approve automated PI detection results before tags are applied | automated classification informs but does not bypass the explicit classification assessment required by governance policy |
 | S13-F5-US03 | Technical Data Steward | apply `pii_contained`, `pii_type`, and `pi_category` governed tags to confirmed PI columns | ABAC masking policies are automatically enforced on the tagged columns |
-| S13-F5-US04 | Data Protection Officer | generate a report of all PI-tagged columns across production catalogs | I have a complete inventory of PI in the platform for PRIS Act compliance |
+| S13-F5-US04 | Data Protection Officer | generate a report of all PI-tagged columns across production catalogues | I have a complete inventory of PI in the platform for PRIS Act compliance |
 | S13-F5-US05 | Data Engineer | integrate PI classification into the ingestion pipeline | newly onboarded source entities are flagged for PI review as part of the standard onboarding workflow |
 
 ### Acceptance Criteria
 
 | AC ID | Given | When | Then |
 |---|---|---|---|
-| S13-F5-AC01 | Unity Catalog Data Classification is enabled | a new table is created in a production catalog | automated PI detection runs and generates classification recommendations (columns likely containing names, addresses, emails, phone numbers, identifiers) |
+| S13-F5-AC01 | Unity Catalog Data Classification is enabled | a new table is created in a production catalogue | automated PI detection runs and generates classification recommendations (columns likely containing names, addresses, emails, phone numbers, identifiers) |
 | S13-F5-AC02 | Automated classification results are available | a domain steward reviews the recommendations | they can approve, reject, or modify each recommendation before governed tags are applied |
 | S13-F5-AC03 | Governed tags are applied to confirmed PI columns | a `pi_category=contact` tag is applied to a column | the ABAC PI masking policy automatically masks the column for users not in `pris_authorised_contact` |
-| S13-F5-AC04 | PI inventory reporting is configured | a monthly PI report is generated | the report lists all columns tagged with any `pi_category` value, grouped by domain and catalog, with the tagging steward and date |
+| S13-F5-AC04 | PI inventory reporting is configured | a monthly PI report is generated | the report lists all columns tagged with any `pi_category` value, grouped by domain and catalogue, with the tagging steward and date |
 | S13-F5-AC05 | Classification is integrated into onboarding | a new source entity is onboarded via the pipeline framework | the onboarding workflow includes a PI classification step that flags the entity for steward review with an initial classification status of `unclassified` per the tagging strategy |
 | S13-F5-AC06 | Classification coverage is monitored | a weekly classification coverage report runs | the report shows the percentage of Silver and Gold tables with completed PI classification (target: 100% for production tables within 30 days of creation) |
 
@@ -178,15 +178,15 @@
 
 ---
 
-## Feature S13-F6: Unstructured Data Ingestion
+## Feature S13-F6: Documents and Files Governed Alongside Structured Data
 
-**Description:** Implement governance and ingestion for unstructured data (files, documents, images) using Unity Catalog Volumes, with classification, access control, and metadata tagging applied consistently with structured data governance.
+**Description:** Unstructured files (PDFs, images, Word documents) are ingested into Unity Catalog Volumes within domain catalogues — classified, tagged, and access-controlled with the same governance as structured Delta tables — so users can discover documents through the catalogue and security officers can verify that sensitive files are protected consistently.
 
 ### User Stories
 
 | Story ID | As a... | I want to... | So that... |
 |---|---|---|---|
-| S13-F6-US01 | Data Engineer | ingest unstructured files (PDFs, images, Word documents) into Unity Catalog Volumes within domain catalogs | unstructured data is governed with the same access control and audit trail as structured Delta tables |
+| S13-F6-US01 | Data Engineer | ingest unstructured files (PDFs, images, Word documents) into Unity Catalog Volumes within domain catalogues | unstructured data is governed with the same access control and audit trail as structured Delta tables |
 | S13-F6-US02 | Domain Data Steward | classify and tag unstructured data Volumes with the same governed tags used for structured data | WAICP classification, sensitivity, and PI indicators are applied consistently across all data types |
 | S13-F6-US03 | Data Analyst | discover and access unstructured data through the Unity Catalog and Alation | I can find relevant documents and files without relying on ad-hoc file shares |
 | S13-F6-US04 | Security Officer | verify that access controls on Volumes prevent unauthorised access to sensitive documents | unstructured data containing PI or commercially sensitive information is protected per governance policy |
@@ -195,7 +195,7 @@
 
 | AC ID | Given | When | Then |
 |---|---|---|---|
-| S13-F6-AC01 | Unity Catalog Volumes are created within domain catalogs | unstructured files are uploaded to a Volume | the files are accessible via the Volume path (e.g. `/Volumes/prod_asset/raw/landing/`) and governed by Unity Catalog access controls |
+| S13-F6-AC01 | Unity Catalog Volumes are created within domain catalogues | unstructured files are uploaded to a Volume | the files are accessible via the Volume path (e.g. `/Volumes/prod_asset/raw/landing/`) and governed by Unity Catalog access controls |
 | S13-F6-AC02 | Governed tags are applied to Volumes | a Volume containing sensitive documents is tagged with `sensitivity=restricted` | only users with appropriate grants can read files from the Volume |
 | S13-F6-AC03 | Volume access is audited | a user reads a file from a Unity Catalog Volume | the access event is captured in the Unity Catalog audit log with user, timestamp, and file path |
 | S13-F6-AC04 | Unstructured data is discoverable | Volumes are registered in Unity Catalog | they appear in Catalog Explorer and Alation with descriptions, tags, and ownership metadata |
@@ -210,9 +210,9 @@
 
 ---
 
-## Feature S13-F7: Technical Pattern Validation
+## Feature S13-F7: All Architecture Patterns Proven End-to-End Before Use Case Delivery
 
-**Description:** Implement technical use cases to develop, test, and prove architecture patterns not covered by business use cases, ensuring end-to-end lineage is captured and all EDAP integration patterns are validated before production deployment.
+**Description:** Every integration pattern (batch, CDC, streaming, API, unstructured) is implemented and validated as a technical use case in the staging environment — with end-to-end lineage confirmed, the full Dev-to-Prod promotion path exercised, and documented implementation guidance produced — so delivery teams can follow proven patterns with confidence when building business use cases.
 
 ### User Stories
 

@@ -6,9 +6,9 @@
 
 ---
 
-## Feature S7-F1: Repository Structure and Branching
+## Feature S7-F1: Governed Code Promotion from Development to Production
 
-**Description:** Establish the Git repository structure, branching strategy, pull request workflows, and code review standards to support collaborative, governed development of EDAP data pipelines and assets.
+**Description:** Engineers can collaborate on pipeline code through a structured Git workflow with mandatory reviews, automated checks, and protected branches — so that every change reaching production has been peer-reviewed, tested, and approved through a predictable promotion path.
 
 ### User Stories
 
@@ -38,9 +38,9 @@
 
 ---
 
-## Feature S7-F2: Databricks Asset Bundles (DABs)
+## Feature S7-F2: All Platform Assets Deployed as Code
 
-**Description:** Implement Databricks Asset Bundles (DABs) as the primary Infrastructure as Code mechanism for defining, packaging, and deploying all Databricks assets with environment-aware configuration across Dev, Test, and Prod.
+**Description:** Every Databricks asset — jobs, pipelines, clusters, permissions — is declared in version-controlled YAML bundles that deploy identically across environments, so that nothing in the platform exists as a manual, undocumented snowflake.
 
 ### User Stories
 
@@ -70,9 +70,9 @@
 
 ---
 
-## Feature S7-F3: Automated Testing Framework
+## Feature S7-F3: Every Pipeline Change Validated Automatically Before Deployment
 
-**Description:** Implement a comprehensive automated testing framework covering unit tests (pytest with Spark session testing), data validation tests, schema checks, integration tests, and Data Quality Monitoring for ongoing table health.
+**Description:** Unit tests, data validation, schema checks, integration tests, and security scans run automatically on every code change, so that defects, data quality regressions, and security issues are caught before they reach any environment — not after.
 
 ### User Stories
 
@@ -104,9 +104,9 @@
 
 ---
 
-## Feature S7-F4: CI/CD Pipeline
+## Feature S7-F4: One-Click Promotion from Dev Through Test to Prod
 
-**Description:** Build CI/CD pipelines using GitHub Actions to automate testing, validation, DABs deployment, and promotion of code and assets through Dev, Test, and Prod environments with manual approval gates.
+**Description:** A tested release can be promoted from Dev to Test to Prod through a single CI/CD pipeline with manual approval gates, full audit trail, and rollback capability — so that deployments are fast, repeatable, and never require someone to manually configure a workspace.
 
 ### User Stories
 
@@ -139,9 +139,9 @@
 
 ---
 
-## Feature S7-F5: Orchestration and Scheduling
+## Feature S7-F5: Pipeline Dependencies Orchestrated with Automatic Retry and Alerting
 
-**Description:** Configure Lakeflow Jobs for pipeline orchestration including dependency chains, retry policies, event-driven triggers, notifications, and monitoring to ensure reliable, timely data processing.
+**Description:** Data pipelines execute in the correct order with automatic retry on transient failures and immediate alerting on persistent issues, so that end-to-end data processing runs reliably without manual monitoring or intervention.
 
 ### User Stories
 
@@ -174,9 +174,9 @@
 
 ---
 
-## Feature S7-F6: Environment Management
+## Feature S7-F6: Non-Prod Environments Reflect Production at 10% or Less Cost
 
-**Description:** Implement environment management practices including non-production data refresh with masked or sampled datasets, environment isolation, and cost controls ensuring non-prod environments do not exceed 10% of production costs.
+**Description:** Dev and Test environments contain realistic, privacy-compliant data that mirrors production schemas and distributions, while cost controls ensure non-production spend stays at or below 10% of production — so that engineers develop against representative data without blowing the budget or exposing real personal information.
 
 ### User Stories
 
@@ -207,9 +207,9 @@
 
 ---
 
-## Feature S7-F7: Naming Conventions and Standards
+## Feature S7-F7: Consistent Naming and Tagging Across All Assets
 
-**Description:** Define and enforce naming conventions, tagging standards, and coding standards across all EDAP assets to ensure consistency, discoverability, and auditability aligned to the EDAP tagging strategy.
+**Description:** Every catalog, schema, table, column, job, pipeline, and group follows a documented naming convention, and every asset carries the required governed tags — so that the platform is navigable by convention, searchable by classification, and auditable for compliance without manual inventory exercises.
 
 ### User Stories
 

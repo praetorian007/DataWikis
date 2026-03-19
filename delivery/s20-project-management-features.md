@@ -9,9 +9,9 @@
 
 ---
 
-## Feature S20-F1: Agile Delivery Framework
+## Feature S20-F1: Delivery Teams Operating in SAFe Cadence with Clear Ceremonies
 
-**Description:** Establish the SAFe/Scrum delivery framework for the EDAP project, including team topology, sprint cadence, PI planning, ceremonies, and working agreements that align the SI delivery structure with WC's target-state operational data team structure.
+**Description:** All delivery teams work in a predictable SAFe/Scrum rhythm — with defined sprint cadence, PI planning, daily standups, reviews, and retrospectives — and the team topology mirrors WC's target BAU structure so that the transition from project delivery to ongoing operations is an evolution, not a handover.
 
 ### User Stories
 
@@ -41,9 +41,9 @@
 
 ---
 
-## Feature S20-F2: Reporting and Governance
+## Feature S20-F2: Stakeholders Informed of Progress, Risks, and Decisions at Every Level
 
-**Description:** Establish project reporting cadences and artefacts for sprint-level, PI-level, and Steering Committee reporting, with integration into WC's MS Project and JIRA tooling for milestone and progress tracking.
+**Description:** Every stakeholder — from Scrum team members to Steerco executives — receives the right level of reporting at the right cadence, with sprint reports, PI summaries, milestone updates, and Steerco packs that give clear visibility into delivery progress, budget, and scope.
 
 ### User Stories
 
@@ -73,9 +73,9 @@
 
 ---
 
-## Feature S20-F3: RAID Management
+## Feature S20-F3: Risks and Issues Tracked, Escalated, and Resolved Transparently
 
-**Description:** Establish a structured RAID (Risk, Assumption, Issue, Dependency) management process with tracking, escalation protocols, and regular review cadence to ensure project risks and issues are managed proactively.
+**Description:** Every risk, assumption, issue, and dependency is captured in a single register, reviewed at every sprint boundary, and escalated through defined protocols — so that nothing stalls silently and Steerco always sees the top items requiring their decision.
 
 ### User Stories
 
@@ -98,15 +98,15 @@
 
 ### Technical Notes
 - RAID management should integrate with JIRA where possible — risks and issues can be tracked as JIRA items with a dedicated issue type or label.
-- Risk scoring should use a standard likelihood × impact matrix (e.g. 5×5) aligned to WC's enterprise risk management framework.
+- Risk scoring should use a standard likelihood x impact matrix (e.g. 5x5) aligned to WC's enterprise risk management framework.
 - Assumptions should be validated and either confirmed or converted to risks on a regular cadence (at least every PI boundary).
 - External dependencies (AWS support, Databricks Professional Services, Alation connector updates, WC IT network changes) should be identified during PI planning and tracked as first-class RAID items.
 
 ---
 
-## Feature S20-F4: Transition-to-Support Planning
+## Feature S20-F4: Production Components Transitioned to BAU Support Seamlessly
 
-**Description:** Develop and execute a transition-to-support plan that defines the BAU handover structure, operational readiness criteria, support model, and knowledge transfer verification to ensure WC can independently operate the EDAP after the SI engagement concludes.
+**Description:** Every production component is transitioned to WC's BAU support teams through a structured process — with defined operational readiness criteria, a tiered support model, and verified knowledge transfer — so that WC can operate the EDAP independently and confidently after the SI engagement concludes.
 
 ### User Stories
 

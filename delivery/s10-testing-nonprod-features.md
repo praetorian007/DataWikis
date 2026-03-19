@@ -10,29 +10,29 @@
 
 ---
 
-## Feature S10-F1: Test Environment Architecture
+## Feature S10-F1: Dev and Test Environments Operational at ≤10% of Production Cost
 
-**Description:** Design and configure Dev and Test (staging) workspace environments with cost-optimised compute, clear catalog bindings, and infrastructure controls that ensure ongoing non-production platform costs do not exceed 10% of production environment costs.
+**Description:** Data engineers and analysts can develop and test in fully functional Dev and Staging workspaces — with the right catalogue bindings, cost-controlled compute, and automatic cleanup — while the organisation keeps non-production platform costs at or below 10% of production spend.
 
 ### User Stories
 
 | Story ID | As a... | I want to... | So that... |
 |---|---|---|---|
-| S10-F1-US01 | Platform Administrator | configure the `wc-edap-dev` and `wc-edap-staging` workspaces with appropriate catalog bindings | developers and testers have access to the correct catalogs (dev read-write, prod read-only) per the defined workspace topology |
-| S10-F1-US02 | Platform Administrator | implement cluster policies with aggressive autoscaling limits, auto-termination, and instance type restrictions for non-prod workspaces | compute costs are constrained to meet the 10% cost target |
-| S10-F1-US03 | Data Engineer | use serverless compute for development and testing workloads by default | I avoid idle cluster costs and the platform only incurs charges during active use |
+| S10-F1-US01 | Data Engineer | develop in a workspace that has read-write access to dev catalogues and read-only access to production catalogues | I can build and test pipelines against real schemas without risking production data |
+| S10-F1-US02 | Data Engineer | use serverless compute by default for development and testing workloads | I avoid idle cluster costs and the platform only incurs charges during active use |
+| S10-F1-US03 | Platform Administrator | enforce cluster policies with aggressive autoscaling limits, auto-termination, and instance type restrictions for non-prod workspaces | compute costs are constrained to meet the 10% cost target |
 | S10-F1-US04 | Finance Analyst | view a monthly cost comparison between production and non-production environments | I can verify that the 10% cost target is being maintained and identify cost anomalies |
-| S10-F1-US05 | Platform Administrator | define separate storage quotas and retention policies for dev and staging catalogs | non-production storage does not grow unbounded and is cleaned up automatically |
+| S10-F1-US05 | Platform Administrator | define separate storage quotas and retention policies for dev and staging catalogues | non-production storage does not grow unbounded and is cleaned up automatically |
 
 ### Acceptance Criteria
 
 | AC ID | Given | When | Then |
 |---|---|---|---|
-| S10-F1-AC01 | Dev and staging workspaces are configured | catalog bindings are reviewed | `wc-edap-dev` has read-write access to `dev_*` catalogs and read-only access to selected `prod_*` catalogs; `wc-edap-staging` has read-write access to `staging_*` catalogs and read-only access to `prod_*` catalogs |
+| S10-F1-AC01 | Dev and staging workspaces are configured | catalogue bindings are reviewed | `wc-edap-dev` has read-write access to `dev_*` catalogues and read-only access to selected `prod_*` catalogues; `wc-edap-staging` has read-write access to `staging_*` catalogues and read-only access to `prod_*` catalogues |
 | S10-F1-AC02 | Cluster policies are applied to non-prod workspaces | a user creates a cluster in the dev workspace | the cluster is constrained to approved instance types, maximum 4 workers, auto-terminates after 30 minutes of inactivity, and uses spot instances |
 | S10-F1-AC03 | Serverless compute is the default for non-prod | a user runs a notebook or SQL query in the dev workspace without specifying compute | the workload executes on serverless compute |
 | S10-F1-AC04 | Cost monitoring is configured | the monthly cost report is generated for Month 2 onwards | non-production DBU and storage costs are itemised separately and verified to be at or below 10% of production costs |
-| S10-F1-AC05 | Retention policies are configured for dev/staging catalogs | a dev catalog table exceeds the configured retention period (e.g. 30 days since last update) | the table is flagged for cleanup and data stewards are notified |
+| S10-F1-AC05 | Retention policies are configured for dev/staging catalogues | a dev catalogue table exceeds the configured retention period (e.g. 30 days since last update) | the table is flagged for cleanup and data stewards are notified |
 | S10-F1-AC06 | Cost alerting is configured | non-prod costs reach 80% of the 10% budget threshold in a billing period | an automated alert is sent to the platform team |
 
 ### Technical Notes
@@ -44,9 +44,9 @@
 
 ---
 
-## Feature S10-F2: Test Data Management
+## Feature S10-F2: Realistic Test Data Available Without Exposing Production PI
 
-**Description:** Implement test data provisioning for non-production environments using masked production data samples, synthetic data generation, and PI-compliant anonymisation to ensure realistic testing without exposing sensitive information.
+**Description:** Data engineers and testers can work with realistic, current datasets in Dev and Staging that reflect production schemas and distributions — while all Personal Information is masked, anonymised, or replaced with synthetic data so PRIS Act compliance is maintained across every non-production environment.
 
 ### User Stories
 
@@ -54,7 +54,7 @@
 |---|---|---|---|
 | S10-F2-US01 | Data Engineer | access realistic, masked test data in the dev workspace | I can develop and test pipelines against data that reflects production schema and distribution without accessing real PI |
 | S10-F2-US02 | Platform Administrator | automate the refresh of non-production datasets from production | test data is kept current without manual intervention |
-| S10-F2-US03 | Data Protection Officer | verify that no unmasked PI exists in dev or staging catalogs | PRIS Act compliance is maintained across all non-production environments |
+| S10-F2-US03 | Data Protection Officer | verify that no unmasked PI exists in dev or staging catalogues | PRIS Act compliance is maintained across all non-production environments |
 | S10-F2-US04 | Data Scientist | generate synthetic datasets for domains where production data sampling is insufficient or prohibited | I can develop models against statistically representative data |
 | S10-F2-US05 | QA Analyst | access edge-case and boundary-condition test data | I can validate pipeline behaviour against known difficult data patterns (nulls, special characters, schema variations) |
 
@@ -65,22 +65,22 @@
 | S10-F2-AC01 | Production data masking is configured | a test data refresh pipeline runs | all columns tagged with `pi_category` in the source production table are masked or anonymised in the target dev/staging table |
 | S10-F2-AC02 | Data sampling is configured | a test data refresh pipeline runs for a large production table (>10M rows) | the dev/staging target contains a statistically representative sample (configurable, default 5% or 500K rows, whichever is smaller) |
 | S10-F2-AC03 | Synthetic data generation is available | a domain team requests synthetic data for a new use case | a synthetic dataset is generated matching the target schema, data types, and distribution profile within 5 business days |
-| S10-F2-AC04 | PI compliance scanning is configured | a weekly scan runs across all dev and staging catalogs | zero tables contain unmasked direct identifiers (as tagged by `pii_type=direct_identifier` in the tagging strategy) |
-| S10-F2-AC05 | Automated refresh is scheduled | the monthly test data refresh completes | dev/staging catalogs contain data no older than 30 days from the production source |
+| S10-F2-AC04 | PI compliance scanning is configured | a weekly scan runs across all dev and staging catalogues | zero tables contain unmasked direct identifiers (as tagged by `pii_type=direct_identifier` in the tagging strategy) |
+| S10-F2-AC05 | Automated refresh is scheduled | the monthly test data refresh completes | dev/staging catalogues contain data no older than 30 days from the production source |
 | S10-F2-AC06 | Edge-case test data is provisioned | a QA analyst queries the test data catalogue | dedicated test datasets exist for null handling, schema drift, special characters, and boundary values |
 
 ### Technical Notes
 - PI terminology: WC uses Personal Information (PI) per the PRIS Act 2024, not PII, per the access model wiki Section 2.
 - Masking in non-prod aligns with ADR-EDP-001 (Development Environment Data Strategy) referenced in the access model wiki.
-- ABAC policies may be relaxed on dev catalogs using anonymised data since the underlying data does not contain real PI per the access model wiki Section 6.4.
+- ABAC policies may be relaxed on dev catalogues using anonymised data since the underlying data does not contain real PI per the access model wiki Section 6.4.
 - Sandbox schemas must not contain unmasked PI per the access model wiki Section 3.3 (Sandbox Governance).
 - Synthetic data should preserve referential integrity and statistical distributions to be useful for pipeline testing and ML model development.
 
 ---
 
-## Feature S10-F3: Automated Test Framework
+## Feature S10-F3: Pipeline Code Changes Automatically Tested Before Merge
 
-**Description:** Implement an automated testing framework covering unit tests for pipeline logic, integration tests across datasets, data quality validation using Lakeflow expectations, and regression testing to catch pipeline regressions during iterative development.
+**Description:** Every pipeline code change is automatically validated — unit tests for transformation logic, integration tests across zone transitions, data quality expectations enforced at each layer — so that defects are caught in CI before they reach staging or production.
 
 ### User Stories
 
@@ -105,17 +105,17 @@
 
 ### Technical Notes
 - Unit tests use pytest with PySpark session mocking per the DataOps scope item (S7).
-- Integration tests execute against the staging workspace using staging catalogs with test data.
+- Integration tests execute against the staging workspace using staging catalogues with test data.
 - DQ expectations use Lakeflow Declarative Pipeline `expect`, `expect_or_fail`, `expect_or_drop`, and `expect_or_quarantine` per the pipeline framework spec.
 - Quarantine pattern follows the medallion architecture wiki: separate quarantine tables per layer with failure metadata.
-- Regression baselines should be stored as Delta tables in the staging catalog for comparison.
+- Regression baselines should be stored as Delta tables in the staging catalogue for comparison.
 - CI/CD pipeline (GitHub Actions) runs unit tests on every PR; integration tests run on merge to the dev/staging branch.
 
 ---
 
-## Feature S10-F4: Performance Testing
+## Feature S10-F4: Pipeline Performance Baselined and Regressions Caught Early
 
-**Description:** Design and execute performance tests for pipeline throughput, SQL Warehouse query performance, concurrent user workloads, and compute tuning to ensure the platform meets operational SLAs and can handle expected data volumes.
+**Description:** Pipeline throughput, query response times, and concurrent workload behaviour are benchmarked against production-scale data — so the team has clear baselines, tuning guidance, and confidence that the platform meets operational SLAs before go-live.
 
 ### User Stories
 
@@ -134,21 +134,21 @@
 | S10-F4-AC01 | Performance test data is provisioned at production-scale volumes (or extrapolated from sample) | the batch ingestion pipeline for the largest source system runs | the pipeline completes within the defined SLA window (to be agreed per use case, default: 4 hours for nightly batch) |
 | S10-F4-AC02 | A representative set of Gold-layer analytical queries is defined | queries are executed against a production-scale dataset on a SQL Warehouse | 90th percentile query response time is below 10 seconds for standard queries and below 60 seconds for complex cross-domain queries |
 | S10-F4-AC03 | Concurrent user testing is configured | 20 concurrent users execute queries against a SQL Warehouse simultaneously | the warehouse auto-scales to handle the load with no query failures and p95 response time degrades by no more than 50% compared to single-user baseline |
-| S10-F4-AC04 | Performance bottlenecks are identified | tuning recommendations are applied (e.g. liquid clustering, partition pruning, materialized views) | a measurable improvement (≥20%) is demonstrated in the affected metric (throughput or query time) |
+| S10-F4-AC04 | Performance bottlenecks are identified | tuning recommendations are applied (e.g. liquid clustering, partition pruning, materialised views) | a measurable improvement (≥20%) is demonstrated in the affected metric (throughput or query time) |
 | S10-F4-AC05 | Performance testing is complete | a performance test report is produced | the report documents: test scenarios, data volumes, measured throughput/latency, tuning actions taken, and baseline metrics for ongoing monitoring |
 
 ### Technical Notes
 - Liquid clustering is the modern replacement for Z-ordering per the medallion architecture wiki; performance tests should validate clustering key selection.
-- Materialized views should be used for frequently accessed Gold aggregations per the medallion wiki guidance.
+- Materialised views should be used for frequently accessed Gold aggregations per the medallion wiki guidance.
 - SQL Warehouse sizing should consider serverless SQL Warehouses for cost-effective auto-scaling.
 - Performance baselines should be stored in `prod_platform` for ongoing comparison.
 - Predictive optimisation (auto-OPTIMIZE, auto-VACUUM, auto-ANALYZE) should be enabled and its impact measured.
 
 ---
 
-## Feature S10-F5: UAT Enablement
+## Feature S10-F5: Business Users Can Validate Data Products Against Their Requirements
 
-**Description:** Create UAT test scripts, business user test scenarios, a defect tracking process, and a formal sign-off procedure to support Water Corporation's user acceptance testing of the EDAP platform and business use cases.
+**Description:** Business users can execute clear, step-by-step UAT scripts for each data product, log defects transparently, and formally sign off that delivered functionality meets their requirements — with governance scenarios (masking, access controls) included as first-class test cases.
 
 ### User Stories
 

@@ -6,20 +6,20 @@
 - `platform/enterprise-data-models.md` — Modelling approach, thin ontology, data contracts, domain-aligned models
 - `platform/medallion-architecture.md` — Medallion zones, dimensional zone, naming conventions
 - `governance/edap-tagging-strategy.md` — Data contract tags, data product tier tags
-- `platform/edap-access-model.md` — Domain catalog structure, product schema, reference catalog
+- `platform/edap-access-model.md` — Domain catalogue structure, product schema, reference catalogue
 - `specifications/edap-pipeline-framework.md` — Zone transitions, configuration schema
 
 ---
 
-## Feature S12-F1: Standards Review and Update
+## Feature S12-F1: Updated Data Modelling Standards Endorsed and Ready for Use
 
-**Description:** Review Water Corporation's existing Data Modelling Standards and Guidelines document (Appendix 7), conduct a gap analysis against modern lakehouse best practices and Databricks capabilities, and produce updated standards endorsed by WC.
+**Description:** Data engineers and architects can reference a single, authoritative modelling standards document — updated for modern lakehouse patterns and endorsed by the Data Governance Council — so every model built in EDAP follows consistent, unambiguous guidance on naming, typing, history management, and structural patterns.
 
 ### User Stories
 
 | Story ID | As a... | I want to... | So that... |
 |---|---|---|---|
-| S12-F1-US01 | Enterprise Data Architect | review WC's existing Data Modelling Standards against current Databricks and lakehouse best practices | gaps between legacy standards and the EDAP platform capabilities are identified |
+| S12-F1-US01 | Enterprise Data Architect | review WC's existing Data Modelling Standards against current Databricks and lakehouse best practices | gaps between legacy standards and the EDAP platform capabilities are identified and addressed |
 | S12-F1-US02 | Enterprise Data Architect | produce a gap analysis documenting where existing standards are insufficient, outdated, or incompatible with EDAP | WC has a clear understanding of what needs to change and why |
 | S12-F1-US03 | Data Governance Council | receive updated standards with best practice recommendations for endorsement | the organisation has a current, endorsed set of data modelling standards aligned to EDAP |
 | S12-F1-US04 | Data Engineer | reference a single, authoritative modelling standards document | I have clear guidance on naming, typing, history management, and structural patterns when building models in Databricks |
@@ -42,9 +42,9 @@
 
 ---
 
-## Feature S12-F2: Dimensional Modelling Framework
+## Feature S12-F2: Business-Ready Dimensional Models Available in the Gold Layer
 
-**Description:** Establish a dimensional modelling framework for the Gold layer, defining patterns for star and snowflake schemas, fact and dimension table design, surrogate key management, and SCD handling in Databricks Delta Lake.
+**Description:** BI analysts and report builders can consume well-structured star and snowflake schemas in the Gold layer — with clear facts, dimensions, hierarchies, and historical change tracking — so they can build dashboards and reports efficiently using consistent, business-friendly data.
 
 ### User Stories
 
@@ -64,21 +64,21 @@
 | S12-F2-AC02 | SCD handling guidance is documented | a data engineer implements an SCD Type 2 dimension in Databricks | the implementation follows the framework's prescribed approach using Delta Lake merge operations or Lakeflow AUTO CDC, with effective/expiry timestamps and current-row indicators |
 | S12-F2-AC03 | Surrogate key strategy is defined | dimension tables are built using the framework | each dimension table uses a consistent surrogate key approach (e.g. SHA-256 hash of business key or monotonically increasing ID) documented in the standards |
 | S12-F2-AC04 | Dimensional model templates are provided | a data engineer begins building a Gold-layer model for a new use case | they can start from a template that includes: dim_ and fact_ prefixes, standard audit columns, SCD columns, and naming conventions per the medallion wiki |
-| S12-F2-AC05 | Conformed dimensions are identified | cross-domain dimensional models are reviewed | shared conformed dimensions (e.g. date, geography, organisational unit) are registered in the `prod_reference` catalog and reused across domain models |
+| S12-F2-AC05 | Conformed dimensions are identified | cross-domain dimensional models are reviewed | shared conformed dimensions (e.g. date, geography, organisational unit) are registered in the `prod_reference` catalogue and reused across domain models |
 | S12-F2-AC06 | Gold Dimensional zone guidance is documented | a model is deployed to the `product` schema | it follows the dimensional zone specifications from the medallion architecture wiki: surrogate keys, SCD Type 2, pre-aggregated measures, predefined hierarchies |
 
 ### Technical Notes
 - Gold Dimensional zone follows the medallion architecture wiki: star/snowflake schemas with surrogate keys, SCD Type 2, pre-aggregated measures, and predefined hierarchies.
 - Table naming uses `dim_`, `fact_`, `agg_` prefixes per the medallion architecture wiki naming conventions.
-- Conformed dimensions reside in `prod_reference` catalog per the access model wiki and enterprise data models wiki.
+- Conformed dimensions reside in `prod_reference` catalogue per the access model wiki and enterprise data models wiki.
 - Liquid clustering should be applied to large fact tables on frequently filtered columns per the medallion architecture wiki.
-- Materialized views are recommended for frequently accessed Gold aggregations.
+- Materialised views are recommended for frequently accessed Gold aggregations.
 
 ---
 
-## Feature S12-F3: Conceptual and Logical Models
+## Feature S12-F3: Domain Data Entities Documented at Conceptual and Logical Levels
 
-**Description:** Develop domain-aligned conceptual and logical data models for each of WC's seven data domains, define shared business entity definitions, and maintain a thin enterprise ontology in the `prod_reference` catalog.
+**Description:** Domain stewards and architects can refer to conceptual models that define each domain's core business entities and relationships, logical models that specify attributes and rules down to column level, and a thin enterprise ontology in `prod_reference` that enables cross-domain discovery — all using business-meaningful terminology surfaced in Alation.
 
 ### User Stories
 
@@ -95,7 +95,7 @@
 | AC ID | Given | When | Then |
 |---|---|---|---|
 | S12-F3-AC01 | Conceptual models are created | each of WC's seven data domains is reviewed | a conceptual model exists for each domain showing core entities (minimum 5 per domain), their key relationships, and a textual description of each entity |
-| S12-F3-AC02 | The thin enterprise ontology is defined | the `prod_reference` catalog is reviewed | it contains cross-domain reference data (shared dimensions, code tables, geographic hierarchies) with documented entity definitions and ownership by Architecture & Strategy |
+| S12-F3-AC02 | The thin enterprise ontology is defined | the `prod_reference` catalogue is reviewed | it contains cross-domain reference data (shared dimensions, code tables, geographic hierarchies) with documented entity definitions and ownership by Architecture & Strategy |
 | S12-F3-AC03 | Logical models are produced | a data engineer reviews the logical model for a domain | it includes entity attributes with data types, primary/foreign key relationships, business rules, and mapping to source system fields |
 | S12-F3-AC04 | Models are created using approved tools | all conceptual and logical models are delivered | they are produced using tools that do not require additional licence procurement (e.g. MS Visio, MS Word) as specified in the scope of work |
 | S12-F3-AC05 | Business glossary terms are defined | domain stewards review the glossary for their domain | each core entity and its key attributes have approved business definitions registered in Alation |
@@ -103,15 +103,15 @@
 
 ### Technical Notes
 - The enterprise data models wiki explicitly advocates a thin enterprise ontology over a monolithic EDM: "a shared set of business terms, domain boundaries, and critical entity definitions" kept "conceptual and lightweight."
-- `prod_reference` catalog implements the thin enterprise ontology per the access model wiki Section 3.3 and the enterprise data models wiki Section 8.
+- `prod_reference` catalogue implements the thin enterprise ontology per the access model wiki Section 3.3 and the enterprise data models wiki Section 8.
 - Domain models crystallise at Silver (domain-aligned) and Gold (consumption-aligned) per the enterprise data models wiki Section 5.2: "Bronze stays source-aligned; Silver is domain-aligned."
 - Business glossary integration with Alation supports the enterprise data models wiki's principle that "the data catalogue becomes the connective tissue that the EDM was supposed to be."
 
 ---
 
-## Feature S12-F4: Physical Implementation in Databricks
+## Feature S12-F4: Physical Models Optimised for Lakehouse Query Patterns
 
-**Description:** Implement physical data models in Databricks using Delta tables with liquid clustering, register all tables in Unity Catalog with comprehensive metadata (column descriptions, table comments, governed tags), and enforce modelling standards at the platform level.
+**Description:** Every table deployed to production is a Delta table with correct data types, liquid clustering on high-filter columns, comprehensive Unity Catalog metadata (comments, descriptions, governed tags), and automated naming-convention checks — so data is performant, discoverable, and governance-ready from the moment it lands.
 
 ### User Stories
 
@@ -130,9 +130,9 @@
 | S12-F4-AC01 | A logical model has been approved | the physical model is implemented in Databricks | Delta tables are created with correct column data types matching the logical model, NOT NULL constraints where specified, and CHECK constraints where applicable |
 | S12-F4-AC02 | Delta tables are created | liquid clustering is applied | large tables (>1M rows) have liquid clustering configured on frequently filtered columns, replacing legacy Z-ordering |
 | S12-F4-AC03 | Tables are registered in Unity Catalog | a table is queried in Catalog Explorer | it has a table comment describing its purpose and business context, and every column has a description |
-| S12-F4-AC04 | Governed tags are required | a table is deployed to a production catalog | it has at minimum `sensitivity`, `domain`, and `data_product_tier` tags applied per the tagging strategy |
+| S12-F4-AC04 | Governed tags are required | a table is deployed to a production catalogue | it has at minimum `sensitivity`, `domain`, and `data_product_tier` tags applied per the tagging strategy |
 | S12-F4-AC05 | Naming convention standards are defined | a CI/CD pipeline runs before production deployment | a validation step checks table and column names against the modelling standards and rejects non-compliant names |
-| S12-F4-AC06 | Predictive optimisation is enabled | a production catalog is monitored over 30 days | OPTIMIZE, VACUUM, and ANALYZE TABLE operations are executed automatically by predictive optimisation without manual scheduling |
+| S12-F4-AC06 | Predictive optimisation is enabled | a production catalogue is monitored over 30 days | OPTIMIZE, VACUUM, and ANALYZE TABLE operations are executed automatically by predictive optimisation without manual scheduling |
 
 ### Technical Notes
 - Liquid clustering replaces Z-ordering as the recommended data layout optimisation per the medallion architecture wiki.
@@ -143,9 +143,9 @@
 
 ---
 
-## Feature S12-F5: Data Contracts and Product Definitions
+## Feature S12-F5: Data Products Defined with Contractual Quality Guarantees
 
-**Description:** Implement data contracts for Gold-layer data products defining schema, SLA tiers, quality thresholds, and ownership, aligned to the data contract tags in the tagging strategy and the data product tier classification.
+**Description:** Data product owners can define explicit contracts for their Gold-layer products — specifying schema, freshness SLA, quality thresholds, and ownership — so consumers know exactly what to expect, SLA breaches are detected automatically, and schema changes are managed without breaking downstream dependencies.
 
 ### User Stories
 
@@ -171,7 +171,7 @@
 ### Technical Notes
 - Data contracts replace upfront schema agreement per the enterprise data models wiki Section 5.4: "explicit, versioned agreements between data producers and consumers."
 - Data product tiers (certified, provisional, experimental, deprecated) are governed tags per the tagging strategy wiki.
-- The `product` schema in each domain catalog is the Gold layer for certified data products per the access model wiki Section 3.3.
+- The `product` schema in each domain catalogue is the Gold layer for certified data products per the access model wiki Section 3.3.
 - Quality thresholds should be enforced using Lakeflow expectations and monitored via system tables per the pipeline framework spec.
 - Data contracts should be stored as structured metadata (e.g. Delta table in `prod_platform`) to enable programmatic validation and reporting.
 - The FAUQD test (referenced in the access model wiki) should be the certification gate for data products moving from provisional to certified status.

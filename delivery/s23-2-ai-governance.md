@@ -9,18 +9,18 @@
 
 ---
 
-## Feature S23.2-F1: Current State Assessment
+## Feature S23.2-F1: WC's Current AI Governance Maturity Assessed with Clear Gaps Identified
 
-**Description:** Review Water Corporation's existing AI governance policies, practices, model inventory, and organisational readiness to establish a baseline for the AI governance framework.
+**Description:** Leadership and governance stakeholders can see exactly where Water Corporation stands on AI governance today — every known AI/ML model inventoried, existing policies rated for currency, and organisational readiness scored across four dimensions — so that the scale of work required is visible, evidence-based, and communicable to executives before investment decisions are made.
 
 ### User Stories
 
 | Story ID | As a... | I want to... | So that... |
 |---|---|---|---|
-| S23.2-F1-US01 | AI/ML Governance Lead | have a documented assessment of our current AI governance maturity | I can understand the baseline and communicate the scale of work required to leadership |
-| S23.2-F1-US02 | Data Governance Manager | understand which AI/ML models are currently in development or production | I can assess the urgency and scope of governance controls needed |
-| S23.2-F1-US03 | Chief Data Officer | have visibility of our AI governance posture relative to regulatory expectations | I can assess organisational risk and prioritise investment |
-| S23.2-F1-US04 | Data Scientist | understand what governance requirements currently apply to my models | I can identify where I am already compliant and where gaps exist |
+| S23.2-F1-US01 | AI/ML Governance Lead | have a documented assessment of our current AI governance maturity scored on a defined scale | I can understand the baseline and communicate the scale of work required to leadership |
+| S23.2-F1-US02 | Data Governance Manager | understand which AI/ML models are currently in development or production, with their governance status | I can assess the urgency and scope of governance controls needed |
+| S23.2-F1-US03 | Chief Data Officer | have visibility of our AI governance posture relative to regulatory expectations (including the Australian Voluntary AI Safety Standard) | I can assess organisational risk and prioritise investment |
+| S23.2-F1-US04 | Data Scientist | understand what governance requirements currently apply to my models and where gaps exist | I can identify where I am already compliant and where I need to act |
 
 ### Acceptance Criteria
 
@@ -40,19 +40,19 @@
 
 ---
 
-## Feature S23.2-F2: AI Governance Framework Design
+## Feature S23.2-F2: AI Risk Classification Framework Ready for Use
 
-**Description:** Design a comprehensive AI governance framework for Water Corporation covering risk classification, model inventory management, transparency requirements, human oversight mechanisms, and responsible AI principles, aligned to the Australian Voluntary AI Safety Standard and the Data Governance Lifecycle.
+**Description:** Any stakeholder proposing or reviewing an AI system can classify it against a defined risk scheme (minimal, limited, high, unacceptable), understand exactly what governance controls apply at that tier, and confirm alignment with the Australian Voluntary AI Safety Standard — so that proportionate oversight is applied from the outset rather than retrofitted after deployment.
 
 ### User Stories
 
 | Story ID | As a... | I want to... | So that... |
 |---|---|---|---|
-| S23.2-F2-US01 | AI/ML Governance Lead | have a risk classification scheme for AI systems | I can apply proportionate governance controls based on the risk level of each AI system |
-| S23.2-F2-US02 | Chief Data Officer | have a framework aligned to Australian regulatory expectations | I can demonstrate responsible AI practices to regulators and the board |
-| S23.2-F2-US03 | Data Scientist | understand the transparency and documentation requirements for my models | I can build governance compliance into my workflow from the outset rather than retrofitting |
+| S23.2-F2-US01 | AI/ML Governance Lead | have a risk classification scheme for AI systems with clear criteria per tier | I can apply proportionate governance controls based on the risk level of each AI system |
+| S23.2-F2-US02 | Chief Data Officer | have a framework aligned to Australian regulatory expectations that I can present to the board | I can demonstrate responsible AI practices to regulators and the board |
+| S23.2-F2-US03 | Data Scientist | understand the transparency and documentation requirements for my model's risk tier | I can build governance compliance into my workflow from the outset rather than retrofitting |
 | S23.2-F2-US04 | Data Governance Manager | have defined human oversight requirements by risk tier | I can ensure appropriate safeguards are in place before AI systems are deployed to production |
-| S23.2-F2-US05 | Legal/Compliance Officer | have responsible AI principles codified in an organisational framework | I can assess AI initiatives against clear, endorsed principles |
+| S23.2-F2-US05 | Legal/Compliance Officer | have responsible AI principles codified with measurable indicators | I can assess AI initiatives against clear, endorsed principles |
 
 ### Acceptance Criteria
 
@@ -75,17 +75,17 @@
 
 ---
 
-## Feature S23.2-F3: Gap Analysis and Recommendations
+## Feature S23.2-F3: Prioritised Improvement Roadmap Endorsed by Stakeholders
 
-**Description:** Analyse gaps between Water Corporation's current AI governance state (F1) and the target framework (F2), produce prioritised improvement recommendations, and map governance responsibilities to the AI/ML Governance Lead role.
+**Description:** Decision-makers can see every gap between current AI governance practice and the target framework, rated by severity, with recommendations sequenced into planning horizons and mapped to the AI/ML Governance Lead role — so that improvement investment is directed where it matters most, accountability is clear, and quick wins build governance momentum from the first PI.
 
 ### User Stories
 
 | Story ID | As a... | I want to... | So that... |
 |---|---|---|---|
-| S23.2-F3-US01 | AI/ML Governance Lead | have a gap analysis identifying where our current practices fall short of the target framework | I can prioritise governance improvement initiatives |
-| S23.2-F3-US02 | Chief Data Officer | have a prioritised improvement roadmap | I can secure funding and executive support for the highest-impact improvements |
-| S23.2-F3-US03 | Data Governance Manager | have governance responsibilities mapped to the AI/ML Governance Lead role | I can establish clear accountability and recruit or assign the role appropriately |
+| S23.2-F3-US01 | AI/ML Governance Lead | have a gap analysis identifying where our current practices fall short of the target framework, rated by severity | I can prioritise governance improvement initiatives |
+| S23.2-F3-US02 | Chief Data Officer | have a prioritised improvement roadmap with effort estimates I can use to secure funding | I can secure funding and executive support for the highest-impact improvements |
+| S23.2-F3-US03 | Data Governance Manager | have governance responsibilities mapped to the AI/ML Governance Lead role with fulfilment status | I can establish clear accountability and recruit or assign the role appropriately |
 | S23.2-F3-US04 | Project Manager | have effort estimates and dependencies for each recommendation | I can integrate AI governance improvements into PI planning |
 
 ### Acceptance Criteria
@@ -107,19 +107,19 @@
 
 ---
 
-## Feature S23.2-F4: AI Model Lifecycle Governance
+## Feature S23.2-F4: AI Model Lifecycle Governed from Development Through Retirement
 
-**Description:** Define governance controls for the full AI model lifecycle, including model card standards, datasheet requirements, approval workflows, monitoring requirements, and retirement criteria.
+**Description:** Data scientists, ML engineers, and governance leads can govern every AI model from initial development through production monitoring to retirement — using standardised model cards, datasheet templates, defined approval workflows, monitoring thresholds, and retirement criteria — so that no model reaches production without appropriate review and no production model operates without ongoing oversight.
 
 ### User Stories
 
 | Story ID | As a... | I want to... | So that... |
 |---|---|---|---|
-| S23.2-F4-US01 | Data Scientist | have a model card template and clear guidance on what to document | I can produce governance documentation efficiently as part of my normal workflow |
-| S23.2-F4-US02 | AI/ML Governance Lead | have a defined approval workflow for promoting models to production | I can ensure appropriate governance review occurs before models serve production workloads |
-| S23.2-F4-US03 | ML Engineer | have defined monitoring requirements for production models | I can implement drift detection, performance tracking, and alerting as standard practice |
-| S23.2-F4-US04 | Data Product Owner | have clear retirement criteria for AI models | I can manage the end-of-life process for models that are no longer fit for purpose |
-| S23.2-F4-US05 | Data Domain Steward | have datasheet standards for training datasets | I can ensure training data provenance, quality, and representativeness are documented and governed |
+| S23.2-F4-US01 | Data Scientist | have a model card template and clear guidance on what to document at each lifecycle stage | I can produce governance documentation efficiently as part of my normal workflow |
+| S23.2-F4-US02 | AI/ML Governance Lead | have a defined approval workflow for promoting models to production with named reviewers and turnaround SLAs | I can ensure appropriate governance review occurs before models serve production workloads |
+| S23.2-F4-US03 | ML Engineer | have defined monitoring requirements for production models covering drift, performance, and data quality | I can implement drift detection, performance tracking, and alerting as standard practice |
+| S23.2-F4-US04 | Data Product Owner | have clear retirement criteria so I know when a model should be decommissioned | I can manage the end-of-life process for models that are no longer fit for purpose |
+| S23.2-F4-US05 | Data Domain Steward | have datasheet standards for training datasets documenting provenance and quality | I can ensure training data provenance, quality, and representativeness are documented and governed |
 
 ### Acceptance Criteria
 
@@ -142,19 +142,19 @@
 
 ---
 
-## Feature S23.2-F5: AI Agent Governance
+## Feature S23.2-F5: AI Agent Actions Bounded, Auditable, and Human-Supervised
 
-**Description:** Define governance controls specific to agentic AI systems, covering action boundaries, permissions, audit trails, human-in-the-loop requirements, and escalation mechanisms.
+**Description:** Anyone building, deploying, or overseeing an AI agent at Water Corporation can define its action boundaries, enforce least-privilege permissions, audit every action it takes, and ensure human oversight is in place — so that no agent operates beyond its sanctioned scope, every action is traceable, and a human can halt any agent within 60 seconds if needed.
 
 ### User Stories
 
 | Story ID | As a... | I want to... | So that... |
 |---|---|---|---|
-| S23.2-F5-US01 | AI/ML Governance Lead | have defined governance controls for AI agents that take autonomous actions | I can ensure agents operate within sanctioned boundaries and do not create unintended consequences |
-| S23.2-F5-US02 | Data Platform Owner | have permission scoping standards for agent service principals | I can enforce least-privilege access for agents interacting with data and systems |
+| S23.2-F5-US01 | AI/ML Governance Lead | have defined governance controls for AI agents that classify and constrain their autonomous actions | I can ensure agents operate within sanctioned boundaries and do not create unintended consequences |
+| S23.2-F5-US02 | Data Platform Owner | have permission scoping standards requiring dedicated service principals with least-privilege access | I can enforce least-privilege access for agents interacting with data and systems |
 | S23.2-F5-US03 | Data Scientist | have clear guidance on defining action boundaries for agents I build | I can design agents with governance compliance built in from the start |
-| S23.2-F5-US04 | Data Governance Manager | have audit trail requirements for all agent actions | I can review and investigate agent behaviour as part of governance operations |
-| S23.2-F5-US05 | Data Consumer | have assurance that AI agents interacting with my data have defined boundaries and oversight | I can trust that agent actions are traceable and reversible where appropriate |
+| S23.2-F5-US04 | Data Governance Manager | have audit trail requirements mandating logging of every agent action, tool invocation, and decision point | I can review and investigate agent behaviour as part of governance operations |
+| S23.2-F5-US05 | Data Consumer | have assurance that AI agents interacting with my data have defined boundaries, oversight, and a kill switch | I can trust that agent actions are traceable and reversible where appropriate |
 
 ### Acceptance Criteria
 

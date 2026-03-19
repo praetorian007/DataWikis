@@ -10,19 +10,19 @@
 
 ---
 
-## Feature S8-F1: RBAC Implementation
+## Feature S8-F1: Domain Teams Independently Manage Their Own Data Access
 
-**Description:** Implement role-based access control across Databricks workspaces, mapping IAM roles to workspace entitlements, configuring service principals for pipeline execution, and enforcing least-privilege access aligned to WC's domain-based group structure.
+**Description:** Domain stewards and engineers can grant, revoke, and audit access within their own domain catalogues without waiting for a central platform team — while the platform enforces least-privilege boundaries that prevent accidental over-provisioning.
 
 ### User Stories
 
 | Story ID | As a... | I want to... | So that... |
 |---|---|---|---|
-| S8-F1-US01 | Platform Administrator | define Databricks workspace roles (Admin, User, Data Engineer, Data Analyst) mapped to WC's functional requirements | each persona has appropriate workspace entitlements without over-provisioning |
-| S8-F1-US02 | Platform Administrator | map AWS IAM roles to Databricks service principals and SCIM groups | platform identity is consistent across AWS and Databricks layers |
-| S8-F1-US03 | Data Engineer | use a dedicated service principal for production pipeline execution | pipelines run with least-privilege credentials and are auditable to a non-human identity |
-| S8-F1-US04 | Domain Data Steward | manage grants within my domain catalog using the MANAGE privilege | I can independently govern access within my domain without central team involvement |
-| S8-F1-US05 | Security Officer | verify that no individual user accounts own production catalogs or schemas | ownership is always held by groups, reducing key-person risk |
+| S8-F1-US01 | Domain Data Steward | grant a new analyst SELECT access to my domain's curated schema myself | they can start querying data today instead of waiting for a platform admin to action my request |
+| S8-F1-US02 | Domain Data Steward | see exactly who has access to what within my domain catalogue | I can answer audit questions and spot excessive privileges without raising a support ticket |
+| S8-F1-US03 | Data Engineer | run production pipelines under a service principal identity | my personal credentials are never used in production, and every pipeline action is traceable to a non-human identity |
+| S8-F1-US04 | Security Officer | confirm that no individual user account owns a production catalogue or schema | key-person risk is eliminated because ownership is always held by groups or service principals |
+| S8-F1-US05 | Data Analyst | attempt an action I'm not entitled to and receive a clear, immediate denial | I understand my access boundaries without guesswork, and least-privilege is enforced consistently |
 
 ### Acceptance Criteria
 
@@ -31,8 +31,8 @@
 | S8-F1-AC01 | Workspace roles are defined in the Databricks account console | a new user is provisioned via SCIM | they receive only the workspace entitlements matching their assigned role (Admin, User, Data Engineer, or Data Analyst) |
 | S8-F1-AC02 | AWS IAM roles are mapped to Databricks service principals | a Lakeflow pipeline executes in the production workspace | it authenticates using its designated service principal, not a personal user identity |
 | S8-F1-AC03 | Domain group structure follows `domain_<domain>_<role>` pattern (e.g. `domain_asset_engineers`) | a domain engineer is assigned to the asset domain | they receive MODIFY on raw/base/curated schemas and SELECT on product schemas within `prod_asset` only |
-| S8-F1-AC04 | The MANAGE privilege is granted to domain steward groups | a domain steward grants SELECT on a schema within their catalog | the grant succeeds without requiring platform admin intervention |
-| S8-F1-AC05 | Production catalogs and schemas are configured | an audit query checks ownership of all production securables | zero objects are owned by individual user accounts; all are owned by groups or service principals |
+| S8-F1-AC04 | The MANAGE privilege is granted to domain steward groups | a domain steward grants SELECT on a schema within their catalogue | the grant succeeds without requiring platform admin intervention |
+| S8-F1-AC05 | Production catalogues and schemas are configured | an audit query checks ownership of all production securables | zero objects are owned by individual user accounts; all are owned by groups or service principals |
 | S8-F1-AC06 | Least-privilege is enforced | an analyst attempts to MODIFY a Bronze table they have SELECT-only access to | the operation is denied with an appropriate permissions error |
 
 ### Technical Notes
@@ -43,19 +43,19 @@
 
 ---
 
-## Feature S8-F2: ABAC Implementation
+## Feature S8-F2: Sensitive Data Automatically Protected Based on Its Classification Tags
 
-**Description:** Implement attribute-based access control using Unity Catalog governed tags and ABAC policies to enforce classification-driven column masking, row-level filtering, and dynamic access decisions aligned to WC's 4-layer tagging strategy.
+**Description:** Once a steward tags a column or table with its sensitivity classification, the platform automatically enforces the right protection — masking PI columns, filtering SOCI-critical rows, and applying these controls identically across every workspace — without anyone writing per-table security rules.
 
 ### User Stories
 
 | Story ID | As a... | I want to... | So that... |
 |---|---|---|---|
-| S8-F2-US01 | Platform Administrator | define governed tag policies at the Databricks account level with restricted allowed values | only approved classification values can be applied to data assets, preventing ad-hoc or inconsistent tagging |
-| S8-F2-US02 | Data Analyst | query a table containing Personal Information (PI) columns | PI columns are automatically masked unless I am a member of the corresponding `pris_authorised_<category>` group |
-| S8-F2-US03 | Domain Data Steward | apply governed tags (`sensitivity`, `pi_category`, `soci_critical`) to tables and columns within my domain | ABAC policies automatically enforce the correct access controls without per-table manual configuration |
-| S8-F2-US04 | Security Officer | ensure SOCI-critical data is only accessible to authorised users | a row filter policy on tables tagged `soci_critical=true` restricts access to `soci_critical_access` group members |
-| S8-F2-US05 | Data Engineer | access production data from the development workspace in read-only mode | the same ABAC masking and filtering policies apply regardless of which workspace I query from |
+| S8-F2-US01 | Domain Data Steward | tag a column as `pi_category=contact` and have it automatically masked for unauthorised users | I don't need to configure individual masking rules — the platform enforces protection from the tag alone |
+| S8-F2-US02 | Data Analyst | query a table containing PI columns and see masked values where I'm not authorised | I can work with the dataset safely without accidentally viewing sensitive data I shouldn't see |
+| S8-F2-US03 | Data Analyst (authorised) | query the same PI column and see unmasked values because I'm in the `pris_authorised_contact` group | I can perform my authorised analytical work without restrictions slowing me down |
+| S8-F2-US04 | Security Officer | know that SOCI-critical data is invisible to users outside the `soci_critical_access` group | regulatory obligations are met automatically, not through manual access reviews |
+| S8-F2-US05 | Data Engineer | query production data from the development workspace in read-only mode | the same masking and filtering policies apply regardless of which workspace I query from — no security gaps between environments |
 
 ### Acceptance Criteria
 
@@ -64,10 +64,10 @@
 | S8-F2-AC01 | Governed tag policies are created for `sensitivity`, `pi_category`, `soci_critical`, `records_class`, `domain`, `data_product_tier`, and `essential_eight` | a steward attempts to apply a value not in the allowed set | the operation is rejected by Unity Catalog |
 | S8-F2-AC02 | A PI masking UDF is deployed in `prod_platform.governance` schema | a user without `pris_authorised_billing` membership queries a column tagged `pi_category=billing` | the column value is returned as `***MASKED***` |
 | S8-F2-AC03 | A PI masking UDF is deployed in `prod_platform.governance` schema | a user who is a member of `pris_authorised_billing` queries a column tagged `pi_category=billing` | the column value is returned unmasked |
-| S8-F2-AC04 | A SOCI row filter policy is attached at catalog level | a user without `soci_critical_access` membership queries a table tagged `soci_critical=true` | zero rows are returned |
-| S8-F2-AC05 | ABAC policies are applied to production catalogs | a developer queries production data via read-only catalog binding from the dev workspace | masking and row filter policies are enforced identically to production workspace queries |
+| S8-F2-AC04 | A SOCI row filter policy is attached at catalogue level | a user without `soci_critical_access` membership queries a table tagged `soci_critical=true` | zero rows are returned |
+| S8-F2-AC05 | ABAC policies are applied to production catalogues | a developer queries production data via read-only catalogue binding from the dev workspace | masking and row filter policies are enforced identically to production workspace queries |
 | S8-F2-AC06 | Compute is configured for ABAC | all clusters and SQL Warehouses used for querying ABAC-protected tables | run Databricks Runtime 16.4 or above, or serverless compute |
-| S8-F2-AC07 | ABAC policies are defined at catalog level | a new table is created within an ABAC-protected catalog | the table automatically inherits the catalog-level ABAC policy without additional configuration |
+| S8-F2-AC07 | ABAC policies are defined at catalogue level | a new table is created within an ABAC-protected catalogue | the table automatically inherits the catalogue-level ABAC policy without additional configuration |
 
 ### Technical Notes
 - ABAC is in Public Preview on AWS; requires DBR 16.4+ or serverless compute per the access model wiki Section 9.
@@ -78,19 +78,19 @@
 
 ---
 
-## Feature S8-F3: SCIM Provisioning
+## Feature S8-F3: Users Provisioned and Deprovisioned in Sync with Corporate Directory
 
-**Description:** Configure account-level SCIM provisioning from Microsoft Entra ID (Azure AD) to synchronise users and groups into Databricks, automate group lifecycle management, and disable workspace-level SCIM to ensure a single source of identity truth.
+**Description:** When someone joins, moves, or leaves Water Corporation in Entra ID, their Databricks access automatically follows — the right groups, the right workspace entitlements, and immediate revocation when they depart — with no manual Databricks administration required.
 
 ### User Stories
 
 | Story ID | As a... | I want to... | So that... |
 |---|---|---|---|
-| S8-F3-US01 | Platform Administrator | configure account-level SCIM provisioning from Entra ID | user and group identities are automatically synchronised to Databricks without manual provisioning |
-| S8-F3-US02 | IT Security Analyst | ensure workspace-level SCIM is explicitly disabled | there is a single authoritative identity source and no workspace-local groups can be created that bypass Unity Catalog governance |
-| S8-F3-US03 | HR Administrator | deactivate a departing employee in Entra ID | their Databricks access is automatically revoked within the next SCIM sync cycle |
-| S8-F3-US04 | Platform Administrator | map Entra ID security groups to the WC domain group naming convention | group membership changes in Entra ID are reflected in Databricks group assignments automatically |
-| S8-F3-US05 | Domain Data Steward | rely on group membership for access governance | when a team member changes roles, their Databricks group membership updates via Entra ID without manual Databricks intervention |
+| S8-F3-US01 | New Team Member | be added to my Entra ID security group and automatically receive the correct Databricks access | I can start working on my first day without waiting for a separate provisioning request |
+| S8-F3-US02 | IT Security Analyst | know that a departing employee's Databricks access is revoked automatically when they're deactivated in Entra ID | there are no orphaned accounts with lingering access to data assets |
+| S8-F3-US03 | Domain Data Steward | trust that group membership changes in Entra ID are reflected in Databricks automatically | when someone moves to a different team, their data access adjusts without me raising a ticket |
+| S8-F3-US04 | Platform Administrator | manage all identity in Entra ID as the single source of truth | no workspace-local groups exist that could bypass Unity Catalog governance |
+| S8-F3-US05 | Security Officer | run a monthly reconciliation showing zero orphaned accounts and zero unsynced groups | I can demonstrate to auditors that identity governance is continuous and automated |
 
 ### Acceptance Criteria
 
@@ -110,19 +110,19 @@
 
 ---
 
-## Feature S8-F4: Encryption and Key Management
+## Feature S8-F4: All Data Encrypted at Rest and in Transit with Customer-Managed Keys
 
-**Description:** Enable encryption at rest using AWS SSE-KMS with customer-managed keys (CMK), configure TLS for data in transit, and implement cluster-level encryption to ensure all data in the EDAP is protected per WC's security requirements and the Essential Eight framework.
+**Description:** Every byte of data in EDAP — at rest in S3, on cluster local disks, and in transit between services — is encrypted using Water Corporation-controlled keys, so WC retains full custody of its encryption posture independent of AWS defaults.
 
 ### User Stories
 
 | Story ID | As a... | I want to... | So that... |
 |---|---|---|---|
-| S8-F4-US01 | Security Officer | enable S3 server-side encryption (SSE-KMS) with customer-managed keys for all EDAP storage buckets | data at rest is encrypted under WC-controlled keys, not default AWS-managed keys |
-| S8-F4-US02 | Platform Administrator | configure cluster-level encryption for Databricks compute | data on local disks and shuffle storage is encrypted during processing |
-| S8-F4-US03 | Security Officer | enforce TLS 1.2 or higher for all data in transit | network communications between Databricks components, AWS services, and client connections are encrypted |
-| S8-F4-US04 | Platform Administrator | implement key rotation policies for customer-managed keys | encryption keys are rotated annually (or on demand) without service disruption |
-| S8-F4-US05 | Data Custodian | restrict key management permissions to authorised roles only | CMK creation, rotation, and deletion require `edap_platform_admins` group membership |
+| S8-F4-US01 | Security Officer | confirm that all EDAP storage is encrypted under WC-controlled customer-managed keys | we are not dependent on AWS default keys and can rotate or revoke keys on our own terms |
+| S8-F4-US02 | Security Officer | confirm that all network communication uses TLS 1.2 or higher | no data traverses the wire unencrypted, meeting Essential Eight and SOCI Act requirements |
+| S8-F4-US03 | Platform Administrator | rotate customer-managed keys annually without service disruption | existing data remains readable via key version history while new writes use the rotated key |
+| S8-F4-US04 | Data Custodian | know that only `edap_platform_admins` can create, rotate, or delete encryption keys | key management permissions are tightly restricted, preventing accidental or unauthorised changes |
+| S8-F4-US05 | Platform Administrator | run an encryption compliance audit and see a fully green report | every S3 bucket, EBS volume, and network endpoint in EDAP reports compliant encryption status |
 
 ### Acceptance Criteria
 
@@ -143,30 +143,30 @@
 
 ---
 
-## Feature S8-F5: Audit Logging and SIEM Integration
+## Feature S8-F5: Every Data Access Event Auditable and Searchable
 
-**Description:** Enable comprehensive Databricks audit logging via Unity Catalog system tables, configure log delivery to Splunk for SIEM integration, and establish queryable audit infrastructure to support compliance reporting, incident investigation, and access monitoring.
+**Description:** Security officers, stewards, and analysts can answer "who accessed what data, when, and from where" within minutes — querying audit logs directly in Databricks or correlating EDAP events with enterprise security data in Splunk.
 
 ### User Stories
 
 | Story ID | As a... | I want to... | So that... |
 |---|---|---|---|
-| S8-F5-US01 | Security Officer | access Unity Catalog audit logs capturing all data access events | I can investigate who accessed what data and when, supporting PRIS Act and SOCI Act compliance |
-| S8-F5-US02 | Platform Administrator | configure system tables for audit logs, billable usage, lineage, and granted privileges | audit data is queryable via SQL for self-service compliance analysis |
-| S8-F5-US03 | Security Operations Analyst | receive Databricks audit logs in Splunk | EDAP events are correlated with broader enterprise security events in the existing SIEM |
-| S8-F5-US04 | Data Custodian | query billable usage system tables by domain and workspace | cost can be attributed to specific domains for chargeback and budget monitoring |
-| S8-F5-US05 | Security Officer | track all privilege grant and revoke operations | changes to the access control posture are fully auditable and reviewable |
+| S8-F5-US01 | Security Officer | search audit logs by user, table, or time range and get results in seconds | I can investigate a suspected data breach or answer a regulator's question without waiting for someone to extract logs |
+| S8-F5-US02 | Security Operations Analyst | see Databricks audit events in Splunk alongside our other enterprise security data | I can correlate EDAP access patterns with broader security events in one place |
+| S8-F5-US03 | Domain Data Steward | trace the lineage of a data quality issue from Gold back through Silver and Bronze | I can pinpoint where a problem was introduced and which upstream tables were involved |
+| S8-F5-US04 | Data Custodian | attribute DBU consumption to each domain and workspace in a monthly report | I can run cost chargebacks and spot domains consuming disproportionate resources |
+| S8-F5-US05 | Security Officer | see every privilege grant and revoke event in the audit trail | I can verify that access control changes were authorised and appropriate |
 
 ### Acceptance Criteria
 
 | AC ID | Given | When | Then |
 |---|---|---|---|
-| S8-F5-AC01 | Unity Catalog audit logging is enabled | a user queries a table in any production catalog | the access event (user, table, timestamp, action, workspace) is captured in the system audit table within 15 minutes |
+| S8-F5-AC01 | Unity Catalog audit logging is enabled | a user queries a table in any production catalogue | the access event (user, table, timestamp, action, workspace) is captured in the system audit table within 15 minutes |
 | S8-F5-AC02 | Splunk integration is configured | audit log events are generated in Databricks | events appear in the designated Splunk index within 30 minutes |
 | S8-F5-AC03 | System tables are enabled | a platform admin runs a query against `system.access.audit` | the query returns structured audit data for the configured retention period |
 | S8-F5-AC04 | Lineage system tables are enabled | a pipeline writes data from Bronze to Silver | the lineage event is captured in `system.access.table_lineage` and reflects the source-to-target relationship |
 | S8-F5-AC05 | Privilege system tables are enabled | a domain steward grants SELECT on a schema | the grant event is captured in both the audit log and `system.information_schema.catalog_privileges` |
-| S8-F5-AC06 | Billable usage system tables are enabled | a monthly cost report is generated | the report attributes DBU consumption to each workspace and catalog (domain) |
+| S8-F5-AC06 | Billable usage system tables are enabled | a monthly cost report is generated | the report attributes DBU consumption to each workspace and catalogue (domain) |
 
 ### Technical Notes
 - System tables referenced in the access model wiki Section 10.2: audit logs, billable usage, lineage, granted privileges.
@@ -176,20 +176,20 @@
 
 ---
 
-## Feature S8-F6: Compliance Reporting and Alerting
+## Feature S8-F6: Compliance Posture Visible on Demand with Proactive Alerting
 
-**Description:** Implement periodic compliance reporting, automated security alerts for anomalous access patterns, SOCI Act compliance monitoring, and break-glass emergency access procedures aligned to the access model wiki's defined process.
+**Description:** Security officers and data protection staff can see the organisation's compliance posture at any moment — classification coverage, access anomalies, SOCI status, PRIS Act adherence — and receive proactive alerts when something drifts out of policy, including a proven break-glass process for emergency access.
 
 ### User Stories
 
 | Story ID | As a... | I want to... | So that... |
 |---|---|---|---|
-| S8-F6-US01 | Security Officer | receive a weekly compliance report summarising access patterns on restricted and privileged data | I can identify anomalous or excessive access and take corrective action |
-| S8-F6-US02 | Security Operations Analyst | receive automated alerts when unauthorised access attempts or privilege escalations are detected | I can respond to potential security incidents in near real-time |
-| S8-F6-US03 | Data Protection Officer | generate a PRIS Act compliance report showing who accessed PI data over a specified period | I can demonstrate regulatory compliance during audits |
-| S8-F6-US04 | Platform Administrator | implement the break-glass emergency access procedure | urgent data access can be granted with two-person approval, time-limited group membership, and full audit trail |
-| S8-F6-US05 | Security Officer | receive a weekly review summary of all break-glass access events | every emergency access event is tracked, reviewed, and documented |
-| S8-F6-US06 | Security Officer | monitor for classification gaps across production catalogs | objects without `sensitivity` or `pi_category` tags are identified and reported for remediation |
+| S8-F6-US01 | Security Officer | open a compliance dashboard and see this week's access patterns on restricted and privileged data | I can spot anomalies without running manual queries or waiting for a periodic report |
+| S8-F6-US02 | Security Operations Analyst | receive an automated alert within 10 minutes when someone attempts to access privileged data without authorisation | I can respond to potential incidents before they escalate |
+| S8-F6-US03 | Data Protection Officer | generate a PRIS Act compliance report showing who accessed PI data over any specified period | I can satisfy a regulator's request on the same day it's received |
+| S8-F6-US04 | Platform Administrator | invoke the break-glass procedure and grant time-limited emergency access with two-person approval and a full audit trail | urgent operational needs are met without permanently weakening the security posture |
+| S8-F6-US05 | Security Officer | see a weekly summary of all break-glass events with requester, approver, incident reference, and duration | every emergency access event is reviewed and documented — nothing slips through |
+| S8-F6-US06 | Domain Data Steward | receive a notification listing my domain's tables that are missing classification tags | I can remediate classification gaps before they become audit findings |
 
 ### Acceptance Criteria
 
@@ -198,10 +198,10 @@
 | S8-F6-AC01 | Compliance reporting is configured | the weekly reporting schedule triggers | a report is generated listing: number of access events on restricted/privileged data, top 10 accessing users, any denied access attempts, and classification coverage percentage |
 | S8-F6-AC02 | Alerting rules are configured | a user attempts to access data tagged `sensitivity=privileged` without being in an authorised group | an alert is raised in Splunk and the platform team is notified within 10 minutes |
 | S8-F6-AC03 | Alerting rules are configured | a privilege escalation occurs (e.g. GRANT MANAGE by a non-admin) | an alert is raised immediately and flagged for investigation |
-| S8-F6-AC04 | The break-glass procedure is implemented | an emergency access request is raised and approved by a platform admin or domain executive | temporary group membership is provisioned in Entra ID with automatic expiry (4-8 hours) and the event is flagged with a dedicated audit tag |
+| S8-F6-AC04 | The break-glass procedure is implemented | an emergency access request is raised and approved by a platform admin or domain executive | temporary group membership is provisioned in Entra ID with automatic expiry (4–8 hours) and the event is flagged with a dedicated audit tag |
 | S8-F6-AC05 | Break-glass access has been provisioned | the expiry time is reached | group membership is automatically revoked without manual intervention |
 | S8-F6-AC06 | Break-glass access has been provisioned | the weekly break-glass review is conducted | all break-glass events from the previous week are listed with: requester, approver, incident reference, data assets accessed, and duration |
-| S8-F6-AC07 | Classification gap monitoring is configured | a weekly scan runs against production catalogs | all tables and schemas missing `sensitivity` or `pi_category` tags are reported to the relevant domain steward for remediation |
+| S8-F6-AC07 | Classification gap monitoring is configured | a weekly scan runs against production catalogues | all tables and schemas missing `sensitivity` or `pi_category` tags are reported to the relevant domain steward for remediation |
 | S8-F6-AC08 | SOCI Act compliance monitoring is configured | an access event occurs on data tagged `soci_critical=true` | the event is logged with enhanced metadata and included in the SOCI compliance report |
 
 ### Technical Notes
@@ -209,4 +209,4 @@
 - Break-glass access does not bypass ABAC policies or Unity Catalog governance; it grants temporary group membership so all access remains logged and policy-filtered.
 - Classification gap monitoring aligns with the tagging strategy wiki's requirement for explicit classification per object.
 - SOCI Act reporting must align with mandatory incident reporting requirements to the Cyber and Infrastructure Security Centre (CISC) as referenced in the governance roles wiki.
-- Compliance reports should be stored in `prod_platform` catalog for retention and audit purposes.
+- Compliance reports should be stored in `prod_platform` catalogue for retention and audit purposes.

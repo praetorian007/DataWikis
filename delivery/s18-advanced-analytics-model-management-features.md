@@ -10,9 +10,9 @@
 
 ---
 
-## Feature S18-F1: MLOps Foundation
+## Feature S18-F1: Data Scientists Track Experiments and Compare Model Runs
 
-**Description:** Establish the foundational MLOps infrastructure using MLflow for experiment tracking and Unity Catalog for model registry, model versioning, and model lineage, providing a governed, reproducible framework for all model development.
+**Description:** Data scientists can log every experiment — parameters, metrics, and artefacts — to MLflow, compare model runs side by side, and register the best models in Unity Catalog with full version history and lineage, giving the team a governed, reproducible foundation for all model development.
 
 ### User Stories
 
@@ -42,9 +42,9 @@
 
 ---
 
-## Feature S18-F2: Feature Engineering
+## Feature S18-F2: Features Registered, Versioned, and Reusable Across Models
 
-**Description:** Implement feature engineering capabilities using Unity Catalog feature tables and Mosaic AI Feature Engineering, enabling governed, reusable features for the OMLIX algorithms and future ML use cases.
+**Description:** Data scientists and engineers can register, version, and reuse engineered features through Unity Catalog feature tables — with point-in-time correctness, scheduled refresh, and the same ABAC governance applied to any other data asset — so that feature work done once benefits every model that needs it.
 
 ### User Stories
 
@@ -62,21 +62,21 @@
 | S18-F2-AC01 | A feature table for the OMLIX propensity model has been created in `prod_customer.curated` | the table is queried in Unity Catalog | it is registered as a feature table, with a primary key defined and feature metadata (descriptions, tags) populated |
 | S18-F2-AC02 | A data scientist creates a training dataset using Mosaic AI Feature Engineering with a point-in-time join | the training dataset is generated | no future data leaks into the training set — the join respects the timestamp column and only includes features available at the label event time |
 | S18-F2-AC03 | A feature computation pipeline is scheduled to run daily via Lakeflow Jobs | 24 hours elapse after source data is updated | the feature table reflects the latest source data, with a pipeline run logged and no data quality failures |
-| S18-F2-AC04 | A feature table contains columns derived from PI data | the ABAC policies on the parent catalog are evaluated | PI-derived feature columns are masked for unauthorised users, consistent with the masking applied to the source PI columns |
+| S18-F2-AC04 | A feature table contains columns derived from PI data | the ABAC policies on the parent catalogue are evaluated | PI-derived feature columns are masked for unauthorised users, consistent with the masking applied to the source PI columns |
 | S18-F2-AC05 | Three feature tables are registered for the three OMLIX algorithms | the feature tables are inspected in Unity Catalog | each table has a primary key, feature descriptions, lineage to source tables, and appropriate governed tags applied |
 
 ### Technical Notes
 - Feature tables in Unity Catalog are standard Delta tables with additional metadata (primary key, timestamp key for point-in-time lookups).
 - Use `databricks.feature_engineering.FeatureEngineeringClient` for feature table creation and training set generation.
-- Feature tables should reside in the `curated` schema of the relevant domain catalog (e.g. `prod_customer.curated.omlix_features_*`).
+- Feature tables should reside in the `curated` schema of the relevant domain catalogue (e.g. `prod_customer.curated.omlix_features_*`).
 - Point-in-time correctness is critical for the OMLIX algorithms — validate by comparing training set results with and without time filtering.
 - Align to the data science lifecycle wiki's Stage 3 (Feature Engineering) guidance on feature stores and governed features.
 
 ---
 
-## Feature S18-F3: Model Training Pipeline
+## Feature S18-F3: Model Training Reproducible and Automated
 
-**Description:** Implement automated model training pipelines for the three OMLIX algorithms using Lakeflow Jobs, with support for hyperparameter tuning, GPU compute where required, and reproducible training runs.
+**Description:** Data scientists can trigger a training pipeline — on demand or on schedule — that reads from governed feature tables, tunes hyperparameters, logs everything to MLflow, and registers the best model in Unity Catalog, producing a fully reproducible and auditable training run every time.
 
 ### User Stories
 
@@ -107,9 +107,9 @@
 
 ---
 
-## Feature S18-F4: Model Deployment and Serving
+## Feature S18-F4: Models Served as Real-Time Endpoints with Traffic Management
 
-**Description:** Deploy trained OMLIX models to production using Mosaic AI Model Serving, with endpoint management, traffic routing, and A/B testing capabilities to enable safe, controlled model rollouts.
+**Description:** Trained models are deployed to production endpoints where they serve predictions via REST API — with A/B traffic routing for safe rollouts, infrastructure-as-code provisioning, and a governance review gate ensuring no model reaches production without documented approval.
 
 ### User Stories
 
@@ -140,9 +140,9 @@
 
 ---
 
-## Feature S18-F5: Model Monitoring
+## Feature S18-F5: Model Performance Monitored with Drift Alerts
 
-**Description:** Implement continuous model monitoring using Lakehouse Monitoring for inference tables, with drift detection, performance tracking, and automated alerting to ensure deployed models remain effective and reliable.
+**Description:** Data scientists and governance leads can see at a glance whether deployed models are healthy — with automated drift detection, performance tracking against ground truth, and alerts that fire before degradation affects business outcomes.
 
 ### User Stories
 
@@ -165,7 +165,7 @@
 
 ### Technical Notes
 - Lakehouse Monitoring (part of Unity Catalog) can be enabled on any Delta table, including inference tables. It computes statistical profiles and drift metrics automatically.
-- Inference tables should be stored in the domain catalog (e.g. `prod_customer.product.omlix_algo1_inference`) and governed by the same ABAC policies as other domain tables.
+- Inference tables should be stored in the domain catalogue (e.g. `prod_customer.product.omlix_algo1_inference`) and governed by the same ABAC policies as other domain tables.
 - Drift detection should use Population Stability Index (PSI) for feature distributions and Kolmogorov-Smirnov (KS) tests for continuous features.
 - Performance monitoring requires ground truth labels — define the process for obtaining and joining labels (may be delayed for some use cases).
 - Alerting should use Databricks SQL alerts or integration with WC's monitoring tooling.
@@ -173,9 +173,9 @@
 
 ---
 
-## Feature S18-F6: OMLIX Algorithm Implementation
+## Feature S18-F6: Three OMLIX Algorithms Operational in the Customer Domain
 
-**Description:** Implement the three OMLIX advanced analytics algorithms for the Customer Domain Data Mart use case, including feature engineering, model training, inference execution, and integration with the Customer domain data product.
+**Description:** The three OMLIX algorithms are trained, deployed, and producing inference results that are integrated into the Customer Data Mart — so that data consumers can query algorithm predictions and scores from Gold-layer tables and use them in reports and operational processes.
 
 ### User Stories
 

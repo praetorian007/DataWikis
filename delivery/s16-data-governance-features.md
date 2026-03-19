@@ -11,9 +11,9 @@
 
 ---
 
-## Feature S16-F1: Audit and Monitoring Framework
+## Feature S16-F1: Every Data Access and Change Auditable with Full Context
 
-**Description:** Establish a comprehensive audit and monitoring framework using Unity Catalog system tables and Databricks platform capabilities to track data access, metadata changes, and anomalous activity across the EDAP.
+**Description:** Any authorised officer can query a centralised audit trail and see exactly who accessed or changed any data asset, when, from where, and what policy was applied — enabling WC to answer regulatory enquiries, detect anomalies, and investigate incidents with timestamped evidence.
 
 ### User Stories
 
@@ -21,7 +21,7 @@
 |---|---|---|---|
 | S16-F1-US01 | Data Protection Officer | query a centralised audit log showing who accessed PI-tagged data, when, and from which workspace | I can respond to PRIS Act 2024 enquiries with specific, timestamped evidence |
 | S16-F1-US02 | Data Platform Owner | monitor for anomalous data access patterns (e.g. bulk exports, unusual query volumes, off-hours access to restricted data) | potential security incidents are detected early and escalated |
-| S16-F1-US03 | Data Domain Steward | view a log of all metadata changes (tag additions, description updates, schema alterations) within my domain catalog | I can track governance activity and identify unauthorised or accidental metadata changes |
+| S16-F1-US03 | Data Domain Steward | view a log of all metadata changes (tag additions, description updates, schema alterations) within my domain catalogue | I can track governance activity and identify unauthorised or accidental metadata changes |
 | S16-F1-US04 | Data Custodian | integrate Unity Catalog audit logs with WC's Splunk instance | security events from the EDAP are correlated with events from other corporate systems in a single monitoring platform |
 | S16-F1-US05 | Data Platform Engineer | configure automated alerts for specific audit events (e.g. privilege escalation, break-glass access, ABAC policy failures) | the platform team is notified of critical events without needing to manually review logs |
 
@@ -44,9 +44,9 @@
 
 ---
 
-## Feature S16-F2: Regulatory Compliance Framework
+## Feature S16-F2: Regulatory Compliance Demonstrable on Demand
 
-**Description:** Implement governance controls and reporting capabilities aligned to Water Corporation's regulatory obligations under the SOCI Act 2018, PRIS Act 2024, State Records Act 2000, and the Essential Eight maturity model.
+**Description:** WC can produce compliance evidence for every applicable regulation — SOCI Act 2018, PRIS Act 2024, State Records Act 2000, and Essential Eight — on demand, with reports that show exactly which assets are classified, which policies are active, and where gaps remain.
 
 ### User Stories
 
@@ -77,16 +77,16 @@
 
 ---
 
-## Feature S16-F3: Automated ABAC Provisioning
+## Feature S16-F3: Fine-Grained Access Provisioned Automatically from Steward Classifications
 
-**Description:** Implement a streamlined, tag-driven access control provisioning workflow where stewardship classifications in Alation drive UC governed tags and ABAC policies with minimal manual intervention, reducing the time from classification decision to enforcement.
+**Description:** When a steward classifies a data asset in Alation, the corresponding access controls in Databricks are enforced automatically — masking PI columns, filtering SOCI rows, and restricting sensitive tables — with no manual provisioning step and no window of unprotected access for newly landed data.
 
 ### User Stories
 
 | Story ID | As a... | I want to... | So that... |
 |---|---|---|---|
 | S16-F3-US01 | Data Domain Steward | classify a new data asset in Alation and have the appropriate access controls automatically enforced in Databricks within 24 hours | there is no manual access control provisioning step required after I complete my classification |
-| S16-F3-US02 | Data Platform Engineer | define ABAC policies once at the catalog level and have them automatically apply to any new table that receives a governed tag | I do not need to create individual row filters or column masks for each new table |
+| S16-F3-US02 | Data Platform Engineer | define ABAC policies once at the catalogue level and have them automatically apply to any new table that receives a governed tag | I do not need to create individual row filters or column masks for each new table |
 | S16-F3-US03 | Data Platform Owner | track the provisioning pipeline's success rate and mean time from classification to enforcement | I can report on the automation's effectiveness and identify bottlenecks |
 | S16-F3-US04 | Data Protection Officer | confirm that newly ingested data containing PI has masking enforced before any analyst can query it | there is no window of unprotected access for newly landed sensitive data |
 
@@ -102,15 +102,15 @@
 ### Technical Notes
 - The pipeline framework should apply default governed tags at table creation time (per the tagging strategy wiki's "classify at birth" principle), ensuring no table exists without at least a baseline classification.
 - The end-to-end automation chain is: pipeline creates table with default tags → steward reviews and updates classification in Alation → sync pipeline pushes updated tags to UC → ABAC policies evaluate at query time.
-- ABAC policies at catalog level apply to all current and future tables — no per-table policy creation is needed.
+- ABAC policies at catalogue level apply to all current and future tables — no per-table policy creation is needed.
 - Monitor provisioning latency using the `prod_platform.governance` audit tables and the reconciliation outputs from S15-F3.
 - Align to the governance lifecycle wiki's Stage 3 (Access and Security Governance) automation objectives.
 
 ---
 
-## Feature S16-F4: Governance Reporting and Dashboards
+## Feature S16-F4: Governance Health Visible Through Real-Time Dashboards
 
-**Description:** Build a suite of governance dashboards and scheduled reports covering compliance status, access audit summaries, data quality scorecards, and classification coverage, enabling the Data Governance Council and domain stewards to monitor governance health.
+**Description:** The Data Governance Council, domain stewards, and platform owners can see the current state of governance — classification coverage, compliance posture, access audit summaries, and data quality scores — through live dashboards and scheduled reports, without needing to run ad-hoc queries.
 
 ### User Stories
 
@@ -140,9 +140,9 @@
 
 ---
 
-## Feature S16-F5: Data Stewardship Operationalisation
+## Feature S16-F5: Stewardship Workflows Operational with Clear Accountability
 
-**Description:** Establish operational stewardship workflows in Alation and supporting processes for metadata review cadence, data product certification, and stewardship task management, aligned to the governance roles defined in WC's governance framework.
+**Description:** Domain stewards follow structured, repeatable workflows in Alation to review, classify, and certify data assets on a defined cadence — with new-asset notifications, certification checklists, and stewardship KPIs that make accountability visible to data owners and the Data Governance Council.
 
 ### User Stories
 
@@ -151,7 +151,7 @@
 | S16-F5-US01 | Data Domain Steward | follow a defined workflow in Alation to review, classify, and certify data assets within my domain on a regular cadence | stewardship is a structured, repeatable process rather than ad-hoc activity |
 | S16-F5-US02 | Data Owner | see a summary of stewardship activity in my domain — reviews completed, certifications granted, outstanding items | I can hold my stewards accountable and report governance progress to the Data Governance Council |
 | S16-F5-US03 | Data Domain Steward | use Alation's certification mechanism to mark data products as "Certified" after they pass the FAUQD test | data consumers can distinguish trusted, certified data products from provisional or experimental ones |
-| S16-F5-US04 | Technical Data Steward | receive notifications when new tables are created in my domain catalog that require classification review | newly ingested data does not remain unclassified beyond the defined review window |
+| S16-F5-US04 | Technical Data Steward | receive notifications when new tables are created in my domain catalogue that require classification review | newly ingested data does not remain unclassified beyond the defined review window |
 | S16-F5-US05 | Data Governance Council member | review stewardship KPIs (e.g. time to classify new assets, certification rate, metadata completeness) across all domains | I can assess whether the stewardship operating model is effective |
 
 ### Acceptance Criteria

@@ -9,15 +9,15 @@
 
 ---
 
-## Feature S23.1-F1: Current State Assessment
+## Feature S23.1-F1: WC's Current Data Product Practices Assessed Against Industry Best Practice
 
-**Description:** Review Water Corporation's existing data product lifecycle, governance practices, and quality assurance processes to establish a clear baseline of maturity, strengths, and areas requiring improvement.
+**Description:** Water Corporation stakeholders can see exactly where the organisation's data product lifecycle, governance practices, and quality assurance processes stand today — rated against a defined maturity scale and benchmarked across all lifecycle stages — so that leadership has a credible, evidence-based baseline from which to prioritise improvement investment.
 
 ### User Stories
 
 | Story ID | As a... | I want to... | So that... |
 |---|---|---|---|
-| S23.1-F1-US01 | Data Governance Manager | have a documented assessment of our current data product lifecycle practices | I can understand our baseline maturity and communicate it to stakeholders |
+| S23.1-F1-US01 | Data Governance Manager | have a documented assessment of our current data product lifecycle practices rated on a defined maturity scale | I can understand our baseline maturity and communicate it credibly to stakeholders |
 | S23.1-F1-US02 | Data Product Owner | understand how our existing SDLC processes compare to industry expectations | I can identify where my team's practices need to evolve |
 | S23.1-F1-US03 | Data Platform Owner | have visibility of current QA processes across all data products | I can assess the consistency and effectiveness of quality assurance across the platform |
 | S23.1-F1-US04 | Data Domain Steward | understand documented vs actual governance practices for data products | I can identify where governance is operating informally and needs formalisation |
@@ -40,18 +40,18 @@
 
 ---
 
-## Feature S23.1-F2: Best Practice Framework
+## Feature S23.1-F2: Target-State Data Product Lifecycle Defined and Endorsed
 
-**Description:** Define an industry best practice framework for the data product software development lifecycle covering design, build, test, deploy, monitor, and retire stages, contextualised for Water Corporation's Databricks lakehouse platform.
+**Description:** Data engineers, product owners, and stewards can follow a single, endorsed lifecycle framework that defines what good looks like at every stage — design, build, test, deploy, monitor, and retire — contextualised for Water Corporation's Databricks lakehouse platform, so that every team builds data products to a consistent, industry-aligned standard rather than inventing their own process.
 
 ### User Stories
 
 | Story ID | As a... | I want to... | So that... |
 |---|---|---|---|
 | S23.1-F2-US01 | Data Engineer | have a defined SDLC framework for data products that covers all lifecycle stages | I can follow a consistent, repeatable process from design through to retirement |
-| S23.1-F2-US02 | Data Product Owner | understand industry best practices for each SDLC stage | I can set appropriate standards and expectations for my data product teams |
-| S23.1-F2-US03 | Data Governance Manager | have a reference framework that connects SDLC practices to governance requirements | I can ensure governance is embedded in the lifecycle rather than bolted on |
-| S23.1-F2-US04 | Technical Data Steward | understand testing and quality best practices for data pipelines | I can implement appropriate quality gates at each lifecycle stage |
+| S23.1-F2-US02 | Data Product Owner | understand industry best practices for each SDLC stage with clear activities and quality gates | I can set appropriate standards and expectations for my data product teams |
+| S23.1-F2-US03 | Data Governance Manager | have a reference framework that connects SDLC practices to governance requirements at each stage | I can ensure governance is embedded in the lifecycle rather than bolted on |
+| S23.1-F2-US04 | Technical Data Steward | understand testing and quality best practices for data pipelines at each lifecycle stage | I can implement appropriate quality gates that catch genuine issues without excessive false positives |
 
 ### Acceptance Criteria
 
@@ -73,18 +73,18 @@
 
 ---
 
-## Feature S23.1-F3: Gap Analysis and Recommendations
+## Feature S23.1-F3: Gaps Prioritised with a Clear Improvement Roadmap
 
-**Description:** Analyse the gaps between Water Corporation's current state (F1) and the target best practice framework (F2), and produce a prioritised improvement roadmap with actionable recommendations.
+**Description:** Decision-makers can see every gap between current practice and the target framework, rated by severity and sequenced into a prioritised roadmap with effort estimates and dependencies — so that improvement investment is directed where it matters most and quick wins are captured immediately.
 
 ### User Stories
 
 | Story ID | As a... | I want to... | So that... |
 |---|---|---|---|
-| S23.1-F3-US01 | Data Governance Manager | have a clear gap analysis comparing our current practices to the target framework | I can understand the scale of change required and communicate it to leadership |
-| S23.1-F3-US02 | Data Platform Owner | have a prioritised roadmap of improvements | I can sequence investment and effort across sprints and PIs |
+| S23.1-F3-US01 | Data Governance Manager | have a clear gap analysis comparing our current practices to the target framework, rated by severity | I can understand the scale of change required and communicate it to leadership |
+| S23.1-F3-US02 | Data Platform Owner | have a prioritised roadmap of improvements sequenced across planning horizons | I can sequence investment and effort across sprints and PIs |
 | S23.1-F3-US03 | Project Manager | understand the dependencies and effort estimates for each recommendation | I can incorporate improvements into delivery planning |
-| S23.1-F3-US04 | Data Product Owner | have specific, actionable recommendations for my domain | I can start implementing improvements within my team without waiting for enterprise-wide changes |
+| S23.1-F3-US04 | Data Product Owner | have specific, actionable recommendations for my domain that I can start on immediately | I can begin implementing improvements within my team without waiting for enterprise-wide changes |
 
 ### Acceptance Criteria
 
@@ -104,9 +104,9 @@
 
 ---
 
-## Feature S23.1-F4: Quality Assurance Framework
+## Feature S23.1-F4: Data Quality Measurable Across Five Dimensions with Automated Monitoring
 
-**Description:** Define a comprehensive data quality assurance framework covering the five core quality dimensions (freshness, accuracy, uniqueness, completeness, distribution), testing patterns for data pipelines, and integration with Databricks Lakehouse Monitoring.
+**Description:** Data engineers, stewards, and consumers can measure, monitor, and act on data quality across five defined dimensions — freshness, accuracy, uniqueness, completeness, and distribution — with automated checks integrated into Databricks Lakehouse Monitoring, tiered alerting, and a quality dashboard — so that quality issues are caught by the platform, not discovered by end users.
 
 ### User Stories
 
@@ -114,9 +114,9 @@
 |---|---|---|---|
 | S23.1-F4-US01 | Data Engineer | have defined testing patterns for each quality dimension | I can implement consistent quality checks across all data pipelines |
 | S23.1-F4-US02 | Technical Data Steward | have a framework for setting quality thresholds per data product | I can configure meaningful quality gates that catch genuine issues without excessive false positives |
-| S23.1-F4-US03 | Data Product Owner | have quality SLAs defined for my data products | I can commit to measurable quality standards and track compliance over time |
-| S23.1-F4-US04 | Data Consumer | have visibility into the quality status of the data I consume | I can make informed decisions about whether to trust the data for my analysis |
-| S23.1-F4-US05 | Data Domain Steward | have an alerting and escalation framework for quality breaches | I can respond to quality issues promptly and ensure they are resolved within agreed timeframes |
+| S23.1-F4-US03 | Data Product Owner | have quality SLAs defined for my data products with measurable targets | I can commit to measurable quality standards and track compliance over time |
+| S23.1-F4-US04 | Data Consumer | see the quality status of the data I consume before I use it | I can make informed decisions about whether to trust the data for my analysis |
+| S23.1-F4-US05 | Data Domain Steward | receive timely alerts when quality breaches occur, with escalation paths | I can respond to quality issues promptly and ensure they are resolved within agreed timeframes |
 
 ### Acceptance Criteria
 

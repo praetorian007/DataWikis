@@ -10,9 +10,9 @@
 
 ---
 
-## Feature S19-F1: Training Needs Assessment and Plan
+## Feature S19-F1: Role-Based Learning Pathways Mapped for Every WC Team Member
 
-**Description:** Conduct a role-based training needs assessment across WC's data and analytics teams, identify skill gaps relative to the EDAP target state, and produce a structured training plan with learning pathways, curriculum design, and a baselined schedule.
+**Description:** Every WC data and analytics team member has a personalised learning pathway showing exactly what training they need, in what sequence, and by when — based on a skills gap assessment that compares current capabilities against what their role requires to operate the EDAP independently.
 
 ### User Stories
 
@@ -39,9 +39,9 @@
 
 ---
 
-## Feature S19-F2: Databricks Product Training
+## Feature S19-F2: WC Engineers Certified on Databricks Platform Fundamentals
 
-**Description:** Procure and deliver Databricks vendor-provided training (e-learning, instructor-led, and certification pathways) for WC staff, covering platform fundamentals, data engineering, data science, and governance.
+**Description:** WC data engineers, analysts, and scientists complete Databricks vendor-provided training pathways and pursue certifications — so that the team has verified, industry-recognised proficiency in the platform they will operate day to day.
 
 ### User Stories
 
@@ -69,9 +69,9 @@
 
 ---
 
-## Feature S19-F3: SI-Developed Technical Training
+## Feature S19-F3: WC Team Proficient in EDAP-Specific Patterns and Practices
 
-**Description:** Develop and deliver SI-authored training covering EDAP-specific DataOps practices, pipeline development patterns, governance workflows, coding standards, and operational procedures that are not covered by vendor training.
+**Description:** WC engineers, stewards, analysts, and platform staff are trained on the specific patterns, workflows, and standards built into the EDAP — covering DataOps practices, pipeline development, governance workflows, and operational procedures that go beyond generic Databricks training.
 
 ### User Stories
 
@@ -100,9 +100,9 @@
 
 ---
 
-## Feature S19-F4: Experiential Learning Programme
+## Feature S19-F4: WC Engineers Building Capability Through Hands-On Delivery
 
-**Description:** Implement an experiential learning programme where WC staff are embedded in SI delivery activities — including shadowing, pair programming, and hands-on participation in sprint work — to build practical skills through guided experience.
+**Description:** WC staff are embedded in SI delivery activities — shadowing, pair programming, and contributing to real sprint stories — so that they build practical skills through guided experience that classroom training alone cannot provide.
 
 ### User Stories
 
@@ -131,9 +131,9 @@
 
 ---
 
-## Feature S19-F5: Knowledge Artefacts
+## Feature S19-F5: Reusable Templates and Runbooks Available for Ongoing Operations
 
-**Description:** Produce a comprehensive set of knowledge artefacts — coding standards, notebook templates, quick reference sheets, FAQs, and operational runbooks — that WC staff can reference after the SI engagement concludes.
+**Description:** WC staff have a comprehensive set of reference artefacts — coding standards, notebook templates, quick reference sheets, FAQs, and operational runbooks — that they can use to work independently after the SI engagement concludes, without needing to rediscover patterns or reinvent procedures.
 
 ### User Stories
 
@@ -163,9 +163,9 @@
 
 ---
 
-## Feature S19-F6: Code Review Knowledge Transfer
+## Feature S19-F6: WC DataOps Team Embedded in the Code Review Process
 
-**Description:** Embed WC DataOps team members in the SI's pull request review process throughout the project, building WC's capability to independently review, approve, and maintain pipeline code after the SI engagement.
+**Description:** WC DataOps engineers participate in every pull request review from day one — progressing from observer to co-reviewer to independent reviewer — so that by project end they can confidently approve, request changes, and maintain pipeline code without SI involvement.
 
 ### User Stories
 

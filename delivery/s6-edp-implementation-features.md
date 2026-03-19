@@ -6,9 +6,9 @@
 
 ---
 
-## Feature S6-F1: Landing Zone and Bronze Ingestion
+## Feature S6-F1: Source Data Lands and Is Preserved in Its Raw Form
 
-**Description:** Implement the Landing Zone using Unity Catalog Volumes and the Raw zone using append-only Delta tables, supporting batch ingestion via Auto Loader and managed ingestion via Lakeflow Connect.
+**Description:** Source system data arrives in the platform and is stored exactly as received — append-only, fully traceable to its origin file and batch — so that engineers always have a complete, unmodified record of what was ingested and when.
 
 ### User Stories
 
@@ -41,9 +41,9 @@
 
 ---
 
-## Feature S6-F2: Streaming Ingestion
+## Feature S6-F2: Real-Time Data Changes Captured and Available Within Minutes
 
-**Description:** Implement streaming and CDC-based ingestion using Lakeflow AUTO CDC for change data capture, streaming tables for real-time append workloads, and event-driven triggers for pipeline activation.
+**Description:** Changes in source databases and event streams are captured continuously and land in the platform within minutes, so that downstream consumers work with near-current data without waiting for overnight batch windows.
 
 ### User Stories
 
@@ -73,9 +73,9 @@
 
 ---
 
-## Feature S6-F3: Silver Layer Transformations
+## Feature S6-F3: Clean, Conformed Data Available for Analysis
 
-**Description:** Implement Silver layer transformations using Lakeflow Declarative Pipelines (SDP) for the Base and Enriched (curated) zones, including data quality expectations, cleansing, deduplication, and conformance rules.
+**Description:** Raw source data is cleansed, deduplicated, quality-checked, and enriched into trustworthy Silver-layer tables, so that analysts and downstream pipelines can work with structurally consistent, business-contextualised data instead of raw extracts.
 
 ### User Stories
 
@@ -108,9 +108,9 @@
 
 ---
 
-## Feature S6-F4: Gold Layer Transformations
+## Feature S6-F4: Business-Ready Data Products Available for Consumption
 
-**Description:** Implement Gold layer transformations producing dimensional models, business aggregations, KPI tables, and UC Metrics definitions in the product schema, optimised for BI consumption and Genie spaces.
+**Description:** Analysts and BI tools can query well-structured dimensional models, pre-aggregated summaries, and centrally defined metrics in the Gold layer, so that common business questions are answerable immediately without complex joins or tribal knowledge.
 
 ### User Stories
 
@@ -143,9 +143,9 @@
 
 ---
 
-## Feature S6-F5: Delta Lake Optimisation
+## Feature S6-F5: Table Maintenance Runs Automatically Without Operator Intervention
 
-**Description:** Apply Delta Lake performance optimisation techniques including liquid clustering, predictive optimisation, deletion vectors, and VACUUM to ensure efficient query performance and storage management across all medallion layers.
+**Description:** Delta tables across all medallion layers are automatically optimised, compacted, and vacuumed based on access patterns, so that query performance stays fast and storage costs stay controlled without anyone manually running maintenance commands.
 
 ### User Stories
 
@@ -176,9 +176,9 @@
 
 ---
 
-## Feature S6-F6: Unity Catalog Registration and Metadata
+## Feature S6-F6: Every Data Asset Discoverable with Context and Lineage
 
-**Description:** Register all tables, views, and volumes in Unity Catalog with comprehensive metadata including table/column comments, governed tags, lineage, and ownership to support discoverability and governance.
+**Description:** Every table, view, and volume in the platform has a human-readable description, governed classification tags, clear ownership, and automatically captured lineage — so that anyone can find data, understand what it means, know who owns it, and trace where it came from.
 
 ### User Stories
 
@@ -210,9 +210,9 @@
 
 ---
 
-## Feature S6-F7: Data Access Policies
+## Feature S6-F7: Sensitive Data Protected Automatically Based on Classification
 
-**Description:** Implement fine-grained data access control using RBAC privilege grants and ABAC with governed tags for row filtering and column masking, including dynamic views for complex cross-table access logic.
+**Description:** Personal information is masked and critical infrastructure data is row-filtered automatically based on governed tags, so that sensitive data is protected by default and only visible to explicitly authorised users — without engineers building bespoke access logic per table.
 
 ### User Stories
 
@@ -245,9 +245,9 @@
 
 ---
 
-## Feature S6-F8: Data Stewardship Processes
+## Feature S6-F8: Data Quality Certified and Tracked Over Time
 
-**Description:** Establish data stewardship workflows for periodic metadata reviews, data certification against the FAUQD test, and integration with Alation as the enterprise data catalogue.
+**Description:** Data stewards can review, certify, and track the quality of data products against defined standards, and the enterprise catalogue stays synchronised — so that consumers know which data products are trustworthy and classifications drive access control automatically.
 
 ### User Stories
 
@@ -277,9 +277,9 @@
 
 ---
 
-## Feature S6-F9: External System Integration
+## Feature S6-F9: External Systems Can Consume EDAP Data Securely
 
-**Description:** Implement integration between the EDAP and external systems in accordance with the approved solution architecture, including reverse ETL, API-based data delivery, and Delta Sharing for cross-organisation data exchange.
+**Description:** Downstream operational systems, regulators, and partner organisations can receive governed data from the platform through documented, access-controlled integration points — so that EDAP data drives value beyond the analytics platform without bypassing security or audit controls.
 
 ### User Stories
 
