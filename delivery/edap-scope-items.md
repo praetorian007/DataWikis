@@ -2,6 +2,58 @@
 
 ---
 
+## S2 – Enterprise Data Platform Design (Databricks-focused)
+
+| Field | Detail |
+|---|---|
+| **Scope Ref.** | S2 |
+| **Scope Heading** | Enterprise Data Platform Design (Databricks-focused) |
+| **Scope Area** | EDP Detailed Design |
+| **Documented Deliverable** | Data Platform Design |
+
+### Scope Summary
+
+Collaborative design of the EDP working with Water Corporation SMEs to design core platform services and implementation patterns.
+
+Key activities include but are not fully inclusive of:
+
+**Platform Architecture**
+- Define EDP environment structure (dev, test, prod, sandbox)
+- Design the storage layout using medallion architecture (landing, bronze, silver, gold)
+- Establish file formats, naming conventions, partitioning strategies, and retention policies
+
+**Ingestion Patterns**
+- Document ingestion patterns using Glue, DMS, AppFlow, and Databricks-native tools
+- Define landing zone interfaces and clarify platform-owned vs externally ingested data flows
+- Embed schema validation, data quality checks, and failure handling patterns
+
+**Transformation and Serving**
+- Design a metadata driven transformation framework based on Databricks LDP
+- Establish approach for reverse ETL to target applications
+- Design silver through to gold layer outputs to support BI tools (Power BI) and analytics
+- Define how data products can be consumed from Databricks SQL, Delta Sharing, and REST APIs
+- Design data sharing mechanisms for external consumers and cross-team access, ensuring secure, governed, and scalable distribution of data products
+
+**Security and Governance**
+- Define Unity Catalog structure, access policies, and lineage model
+- Design Entra integration for user and group management (SCIM/SSO)
+- Define encryption, secrets management, and audit logging standards
+- Define data retention and purge policies to ensure compliance with regulatory and operational requirements
+
+**Metadata Modelling**
+- Align Delta schema descriptions with existing conceptual/logical models where needed
+- Define metadata tagging standards and integrate with Alation and Unity Catalog
+
+### Deliverable
+
+S2 – Enterprise Data Platform Design (Databricks-focused): Define environment structure, storage layout, platform standards; document ingestion patterns; establish security/governance (Unity Catalog, Entra, encryption, audit logging).
+
+### Criteria
+
+Approved Data Platform Design (detailed platform architecture, medallion architecture, ingestion and RETL patterns, data quality management, metadata-driven transformation framework, security & governance, metadata modelling, Alation integration, non-prod environs and testing strategy); Specifications updated;
+
+---
+
 ## S5 – EDP Configuration
 
 | Field | Detail |
