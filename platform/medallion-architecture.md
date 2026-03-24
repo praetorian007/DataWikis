@@ -23,6 +23,8 @@ This architecture guarantees atomicity, consistency, isolation, and durability (
 
 The medallion architecture is not a rigid prescription. It represents a spectrum of possibilities that can be adapted to unique organisational circumstances. Each of the three core layers can be further segmented into one or more zones to support data management, processing, access controls, or other specific requirements. Some organisations introduce extra layers (e.g. a pre-Bronze landing area or a Platinum layer for specialised data products), and the architecture is compatible with both Data Mesh (domain-specific medallion stacks) and traditional centralised governance models.
 
+With multiple sublayers, it is important to maintain clear boundaries between zones. Establish a **RACI matrix** defining which teams own each zone (Responsible, Accountable, Consulted, Informed) and document **explicit criteria for data promotion** between layers — e.g. what quality thresholds, validation checks, and approvals are required before data moves from Bronze to Silver, or from Silver to Gold.
+
 > **Note:** See the **Zone Comparison** table at the end of this document for a quick summary of all zones.
 
 ---
@@ -122,6 +124,7 @@ The Bronze layer is the system of record for all ingested data. It preserves a c
 - Consider ingesting semi-structured data (JSON, XML) as a single **VARIANT** column for maximum robustness against upstream schema changes — this ensures no data is dropped due to unexpected field additions or type changes.
 - Use the **rescued data column** (`_rescued_data`) pattern from Auto Loader to capture any data that fails parsing or doesn't match the expected schema, preventing data loss.
 - Leverage **Lakeflow Spark Declarative Pipelines** (formerly Delta Live Tables) with **expectations** to define data quality constraints. Expectations can retain, drop, or fail on invalid records, providing built-in quarantine capabilities.
+- Use Lakeflow Declarative Pipelines with **auto CDC** to automate maintenance of audit columns and transformations between layers. Auto CDC can stream changes natively from Delta tables, maintaining audit trail columns automatically and reducing manual pipeline overhead.
 
 **Audit Columns:**
 
@@ -132,10 +135,12 @@ The Bronze layer is the system of record for all ingested data. It preserves a c
 | `edap.file_size` | Source file size in bytes (Auto Loader metadata) |
 | `edap.file_modification_time` | Source file last-modified timestamp (Auto Loader metadata) |
 | `edap_batch` | Epoch in milliseconds describing when the batch arrived (e.g. `1720071745635`) |
-| `edap_hash` | SHA-512 hash of all non-`edap_` prefixed fields (separated by `\|` joiner, including secret salt) — supports change detection and deduplication |
+| `edap_hash` | SHA-256 hash of all non-`edap_` prefixed fields (separated by `\|` joiner, including secret salt) — supports change detection and deduplication |
 | `edap_inserted_ts` | Timestamp when the record was inserted into the Raw Zone |
 
 A configuration file specifies any fields to be excluded from the calculation of the `edap_hash`.
+
+> **Note:** Delta change data feeds and Lakeflow Declarative Pipelines with auto CDC can stream changes natively from Delta tables, potentially avoiding the compute overhead of hash computation. Where pipelines use these capabilities for incremental processing, the `edap_hash` column may be omitted — evaluate on a per-source basis whether hash-based change detection adds value beyond what the platform provides natively.
 
 **Standard Tags:**
 
@@ -166,7 +171,7 @@ The Silver layer is where the ELT methodology applies "just enough" transformati
 
 **Purpose:** Securely store and isolate protected information (e.g. Personal Information) in a controlled manner.
 
-> **Note:** The Protected Zone is optional. Unity Catalog governed tags and column-level security can be used as an alternative to physical zone separation — tagging PI columns and applying dynamic masking policies achieves the same access control outcome without requiring a dedicated zone.
+> **Note:** The Protected Zone is optional and in most cases the **recommended alternative** is to use Unity Catalog governed tags combined with ABAC policies and dynamic column masking. This approach achieves the same access control outcome without requiring a dedicated zone, reduces data duplication, and provides lower operational overhead. Governed tags (e.g. `pi_contained`, `pi_type`, `sensitivity_type`) drive automatic column masking and row filtering policies at the catalog level, scaling governance across all medallion layers without per-table policy management. Evaluate whether your compliance requirements genuinely need physical zone separation before introducing a Protected Zone.
 
 **Characteristics:**
 
@@ -211,7 +216,7 @@ The Silver layer is where the ELT methodology applies "just enough" transformati
 | Column | Description |
 |--------|-------------|
 | `edap_eff_from` | Record effective-from timestamp (maps to `__START_AT` in SCD Type 2) |
-| `edap_eff_to` | Record effective-to timestamp (maps to `__END_AT` in SCD Type 2) |
+| `edap_eff_to` | Record effective-to timestamp (maps to `__END_AT` in SCD Type 2). Use `NULL` for current records rather than a sentinel value such as `9999-12-31` — this simplifies querying, is more intuitive, and conforms to Declarative Pipeline defaults |
 | `edap_is_current` | Whether this is the current version of the record (`true`/`false`) |
 | `edap_is_deleted` | Whether the record has been soft-deleted (`true`/`false`) |
 | `edap_inserted_ts` | Timestamp when the record was first inserted |
@@ -260,6 +265,16 @@ The Silver layer is where the ELT methodology applies "just enough" transformati
 - Ensure naming conventions, field standardisation, and metadata are consistent with the rest of the Silver layer.
 - Monitor join operations to prevent mismatches or lost records in merged datasets.
 - This zone is where data begins to transition from source-aligned to business-aligned structures.
+
+**When to use Base vs Enriched:**
+
+| Consideration | Base Zone | Enriched Zone |
+|---|---|---|
+| **Source alignment** | Structurally aligned to source systems — one Base table per source entity | Business-aligned, combining multiple source entities |
+| **Joins** | Minimal — cleansing and standardisation within a single source | Cross-source joins, reference data lookups, master data integration |
+| **Business logic** | Light — type casting, null handling, deduplication, field renaming | Advanced — calculations, entity resolution, geospatial enrichment |
+| **Example** | `sap_base.work_orders` (cleansed SAP work orders) | `asset_ops_enriched.asset_work_history` (work orders joined with asset master and location data) |
+| **Consumers** | Data Engineers building enriched datasets | Data Engineers, Data Scientists, and as input to Gold |
 
 **Audit Columns:** Same effectivity and DQ columns as the Base Zone are carried forward.
 
@@ -367,6 +382,7 @@ Facts, dimensions, and aggregates co-reside in the BI Zone, distinguished by nam
 - Track dimensional changes with `eff_from`/`eff_to` timestamps.
 - Apply appropriate surrogate key management strategies.
 - Use **materialized views** for frequently accessed aggregations to improve query performance.
+- Apply **liquid clustering** on larger fact and dimension tables for better query performance — cluster on frequently filtered columns (e.g. date keys, dimension keys).
 - Define refresh frequencies and enforce SLAs on data recency.
 - Provide semantic metadata for BI tools (e.g. Databricks AI/BI Dashboards, Power BI, Tableau), AI agents, and Databricks Apps.
 - Organise Gold tables by business domain (e.g. sales, operations, finance).
@@ -397,6 +413,8 @@ Facts, dimensions, and aggregates co-reside in the BI Zone, distinguished by nam
 **SQL Metric Views** — Traditional SQL views over BI Zone tables. Each view encapsulates a single metric or a cohesive set of related metrics. Consistent grain, filters, and business logic ensure all consumers see the same numbers. Discoverable via Unity Catalog with comments describing the metric definition.
 
 **UC Metrics (Public Preview)** — First-class Unity Catalog objects that define business metrics as catalog-level entities. UC Metrics are defined once and consumed across AI/BI Dashboards, Genie spaces, notebooks, SQL, and (via upcoming integrations) external tools such as Tableau, Hex, Sigma, and ThoughtSpot. UC Metrics carry semantic metadata (display names, formats, descriptions) that improve the accuracy of natural-language queries in Genie. Where available, UC Metrics are the preferred approach for new metric definitions as they provide richer semantic context and broader consumption than SQL views.
+
+> **Important:** Implementing a metric layer is critical for consistent semantic layer reporting across the organisation. Without governed metric definitions, different teams inevitably calculate the same KPIs differently, eroding trust in data. Prioritise UC Metrics for key organisational KPIs to establish a single source of truth for business metrics.
 
 **Guidance:**
 
@@ -481,7 +499,7 @@ Lakeflow Spark Declarative Pipelines (SDP) — formerly Delta Live Tables (DLT) 
 
 - **Streaming tables**: For continuous, append-only ingestion (ideal for Bronze).
 - **Materialized views**: For incremental batch transformations that automatically track upstream changes (ideal for Silver and Gold).
-- **AutoCDC**: Handles out-of-order CDC events and supports SCD Type 1 and Type 2 patterns without complex manual merge logic.
+- **AutoCDC**: Handles out-of-order CDC events and supports SCD Type 1 and Type 2 patterns without complex manual merge logic. AutoCDC can also automate maintenance of audit columns (e.g. `edap_eff_from`, `edap_eff_to`, `edap_is_current`) and stream changes natively from Delta tables, potentially eliminating the need for hash-based change detection.
 - **Expectations**: Declarative data quality constraints that can retain, drop, or quarantine invalid records.
 - **Automatic lineage**: Full dependency graph managed by the framework.
 
@@ -497,7 +515,7 @@ Auto Loader is the recommended ingestion tool for streaming file ingestion from 
 
 ### Predictive Optimisation
 
-Databricks **predictive optimisation** automatically handles OPTIMIZE, VACUUM, and ANALYZE TABLE operations for managed Delta tables in Unity Catalog. Rather than manually scheduling maintenance, predictive optimisation uses historical access patterns to determine when and how to optimise each table. It is recommended to enable predictive optimisation at the catalog or schema level to reduce operational overhead and ensure consistent table performance across all medallion layers.
+Databricks **predictive optimisation** automatically handles OPTIMIZE, VACUUM, and ANALYZE TABLE operations for managed Delta tables in Unity Catalog. Rather than manually scheduling maintenance, predictive optimisation uses historical access patterns to determine when and how to optimise each table. All tables should reside in **managed catalogs** with predictive optimisation enabled at the catalog or schema level — this ensures consistent table performance across all medallion layers with minimal operational overhead.
 
 ### Lakehouse Federation and the Medallion Architecture
 
@@ -588,6 +606,8 @@ Prefix names with the source of the data where appropriate, particularly in Bron
 ## Tagging Strategy
 
 Tags provide metadata for governance, cost management, and operational visibility across the EDAP. Apply tags consistently to all taggable assets.
+
+> **Recommended approach:** Start with **UC Governed tags**, which provide controlled management of tag values and enable powerful downstream tooling including ABAC policies, PII scanning, and classification-driven governance. Governed tags ensure only authorised users can set or modify tag values, providing a trustworthy foundation for automated policy enforcement.
 
 ### What to Tag
 
