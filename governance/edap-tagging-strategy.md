@@ -60,6 +60,34 @@ The EDAP uses a four-layer tagging model. Each layer serves a distinct purpose a
 
 **Principle:** Tags at each layer are independent but composable. A single table or column may carry tags from all four layers simultaneously. The layers are not hierarchical in a strict sense — rather, Layer 1 and Layer 2 inform Layer 3 decisions, and Layer 4 operates independently for platform management. The `classification_status` tag in Layer 4 governs how cross-domain access evolves as classification matures.
 
+### 3.1 All Tags Must Be Unity Catalog Governed Tags
+
+Every tag key defined in this document **must** be implemented as a Unity Catalog **governed tag** with a tag policy defined at account level. Simple (unmanaged) string tags are not permitted for EDAP governance metadata.
+
+Governed tags provide capabilities that simple tags do not:
+
+| Capability | Governed Tags | Simple Tags |
+|---|---|---|
+| **Controlled allowed values** | Tag policy enforces permitted values — prevents ad-hoc or inconsistent classification | Any string value can be assigned |
+| **ABAC policy attachment** | Governed tags can drive column masking, row filtering, and access policies | Cannot be used as ABAC policy inputs |
+| **PII scanning integration** | Unity Catalog automated data classification can propose values for governed tags | Not integrated |
+| **Inheritance semantics** | Tag values propagate from catalog → schema → table with documented override rules | No inheritance |
+| **Audit trail** | All tag assignments and changes are captured in UC system tables (`system.access.audit`) | Limited audit visibility |
+
+**Example — creating a governed tag:**
+
+```sql
+-- Create a governed tag with controlled allowed values
+CREATE TAG IF NOT EXISTS edap.access_model
+  WITH VALUES ('open', 'controlled', 'restricted', 'privileged');
+
+-- Apply the tag to a table
+ALTER TABLE prod_silver.customer_base.customer_billing
+  SET TAGS ('edap.access_model' = 'restricted');
+```
+
+> **Note:** The companion **EDAP Access Model** (Section 6.2) details how governed tags serve as inputs to ABAC policies. This tagging strategy is the authoritative source for the full governed tag taxonomy; the Access Model is the authoritative source for how those tags drive enforcement.
+
 ---
 
 ## 4. Layer 1 — WAICP Classification (Mandatory Corporate)
@@ -260,6 +288,67 @@ Where automated detection and steward-assigned tags disagree:
 
 This layer translates the classification (Layer 1) and sensitivity reason (Layer 2) into **concrete Unity Catalog enforcement actions**. These tags drive automated policy enforcement within the EDAP.
 
+### 6.1.1 How Tags Compose into ABAC Policies
+
+Tags across layers do not operate in isolation — they compose at query time into enforcement decisions. Unity Catalog ABAC policies evaluate governed tags dynamically, meaning any tag change takes immediate effect on the next query.
+
+**Composition flow:**
+
+```
+Layer 1 (WAICP)  ──┐
+                    ├──►  Layer 3 (Access & Handling)  ──►  ABAC Policy Enforcement
+Layer 2 (Sensitivity) ──┘         │                              │
+                                  │                              ▼
+Layer 4 (classification_status) ──┘                    Query-time decision:
+                                                       • Column masked or visible?
+                                                       • Row included or filtered?
+                                                       • Table accessible or denied?
+```
+
+**Tag composition rules:**
+
+| Input Tags | Enforcement Output | Mechanism |
+|---|---|---|
+| `pi_type` (L2) + `masking_required` (L3) | Column masking applied at query time | ABAC column mask policy evaluates `masking_required` tag, applies the corresponding `edap_mask_*` function based on `pi_type` category |
+| `access_model` (L3) + `classification_status` (L4) | Table-level visibility and query access | `classification_status` overrides `access_model` for unclassified data (see Section 8.6); once classified, `access_model` is enforced as defined |
+| `waicp_classification` (L1) + `sensitivity_type` (L2) | Minimum `access_model` floor | Section 9 mapping determines the minimum access restriction; Layer 3 tags can be more restrictive but not less |
+| `soci_critical` (L4) + `encryption_at_rest` (L3) | Storage-level encryption | Tables tagged `soci_critical = true` require `encryption_at_rest = customer_managed_key` |
+
+**Worked example — query-time enforcement chain:**
+
+A business analyst queries `prod_silver.customer_base.customer_billing`. The table carries:
+- `waicp_classification = OFFICIAL:Sensitive-Personal` (L1)
+- `pi_contained = true` (L2), with column `customer_name` tagged `pi_type = direct_identifier` (L2)
+- `masking_required = full` on `customer_name` column (L3)
+- `access_model = restricted` (L3)
+- `classification_status = classified` (L4)
+
+At query time:
+1. UC checks `classification_status = classified` → `access_model` is fully active
+2. UC checks `access_model = restricted` → user must be in a granted security group
+3. For `customer_name` column, the ABAC policy matches `masking_required = full` → applies `edap_mask_pi_direct` function
+4. The masking function checks `is_member('sg-edap-pi-authorised')` → returns masked or unmasked value
+
+> **Note:** See the companion **EDAP Access Model** (Section 6.3) for the full catalogue of ABAC policy definitions and SQL implementation patterns.
+
+### 6.1.2 ABAC Policy Lifecycle
+
+ABAC policies are governed artefacts. Creating, modifying, or retiring a policy follows a defined process to prevent access control drift.
+
+| Action | Proposer | Reviewer | Approver |
+|---|---|---|---|
+| **New cross-cutting policy** (e.g. PI masking, SOCI filtering) | Platform team or security team | Platform team + security team | Data Governance Council |
+| **New domain-specific policy** (e.g. regional row filter) | Domain data steward | Platform team (validates UC compatibility) | Domain data owner |
+| **Modify existing policy** | Policy owner (platform or domain) | Platform team + security team | Original approver |
+| **Retire policy** | Policy owner | Impact assessment across dependent tables | Data Governance Council (cross-cutting) or domain owner (domain-specific) |
+
+**Implementation requirements:**
+
+- ABAC policies must be managed as code in source control and deployed via Terraform or Databricks Asset Bundles (DABs).
+- All policies must be tested in dev/staging environments before production deployment.
+- Policies are reviewed on a **quarterly cadence** aligned with the stewardship review cycle.
+- The companion **EDAP Access Model** (Section 6.3) defines the standard policy categories and SQL implementation patterns.
+
 ### 6.2 Tag Definitions
 
 #### 6.2.1 Access Model
@@ -292,6 +381,7 @@ This layer translates the classification (Layer 1) and sensitivity reason (Layer
 | `full` | Full masking | Column mask function returns NULL or `***MASKED***` for unauthorised users |
 | `hash` | One-way hash | Column mask function returns SHA-256 hash (supports joins without revealing value) |
 | `redact` | Complete redaction — column not visible | Column mask function returns NULL; column excluded from discovery for unauthorised users |
+| `tokenise` | Format-preserving, reversible tokenisation | Column mask function returns a format-preserving token via a token vault. Unlike hashing, tokenisation is reversible by authorised users and preserves field format (e.g. a 10-digit number remains a 10-digit number). Use for financial identifiers (TFN, bank accounts) where format must be preserved for downstream processing and the original value must be recoverable. |
 
 **Masking function naming convention:** `edap_mask_<sensitivity_category>` — e.g. `edap_mask_pi_name`, `edap_mask_financial`, `edap_mask_health`. Functions must be defined as reusable Unity Catalog functions so that the same masking logic is applied consistently across tables.
 
@@ -374,6 +464,8 @@ These tags link a table to its governing data contract, enabling automated contr
 | `notify` | Breaking changes are communicated to registered consumers with a minimum notice period, but do not result in a new contract version. |
 | `none` | No formal breaking change policy. Appropriate for exploratory or sandbox data only. |
 
+> **Note:** These three tags provide a tag-level summary of the data contract, not a replacement for the full contract definition. The companion **EDAP Data Products** document defines the complete data contract structure including schema specifications, quality thresholds, freshness SLAs, and consumer agreements. Where data contracts exist, these tags should be kept in sync with the authoritative contract definition.
+
 #### 6.2.6 Retention
 
 | Tag Key | `retention_days` |
@@ -410,8 +502,18 @@ This layer supports platform operations, lineage, discoverability, and data prod
 | `bi_published` | Whether the table is exposed to BI tools (Power BI, etc.) | `true`, `false` | Tables (Gold BI) |
 | `quality_tier` | Steward-certified quality level indicating consumer trust | `certified`, `provisional`, `uncertified` | Tables (Silver, Gold) |
 | `data_product_tier` | Maturity tier of a data product or ML model as a managed asset | `experimental`, `certified`, `deprecated` | Tables (Gold), Models |
+| `data_product_state` | Lifecycle state of a data product (aligns with the companion **EDAP Data Products** document) | `draft`, `published`, `deprecated`, `retired` | Tables (Gold) |
 | `ingestion_method` | How the data arrived in the platform | `autoloader`, `lakeflow_connect`, `cdc`, `zerobus`, `manual`, `api` | Tables (Bronze) |
 | `ingestion_team` | Team responsible for the ingestion pipeline | Team identifier | Tables (Bronze) |
+| `cost_centre` | WC cost centre code for chargeback and cost attribution | Cost centre identifier | Schemas, tables (optional) |
+| `project_code` | Project identifier for CAPEX/OPEX cost allocation | Project code | Schemas, tables (optional) |
+| `bc_tier` | Business continuity tier — drives recovery prioritisation | `critical`, `important`, `standard` | Tables (optional) |
+| `rto_hours` | Recovery Time Objective — how quickly the data must be restored | Integer (hours) | Tables (optional, recommended for Gold data products) |
+| `rpo_hours` | Recovery Point Objective — maximum acceptable data loss window | Integer (hours) | Tables (optional, recommended for Gold data products) |
+
+> **Environment is not a tag.** The EDAP encodes environment (dev, test, staging, production) in the **catalog name** (e.g. `prod_bronze`, `dev_silver`) rather than as a tag. This avoids tag/catalog mismatch, reduces tag sprawl, and aligns with Unity Catalog's catalog-level workspace binding for environment isolation. See the companion **EDAP Access Model** (Section 3.2) for the catalog naming convention. Exception: federated tables that sit outside the standard catalog naming convention may carry an `environment` tag where needed for disambiguation.
+
+> **Predictive optimisation benefit.** Managed tables in catalogs with governed tags benefit from Databricks **predictive optimisation** — automatic OPTIMIZE, VACUUM, and ANALYZE TABLE operations based on historical access patterns. This is a tangential but valuable benefit of the governed tag approach that reduces operational overhead for platform engineering teams. See the companion **Medallion Architecture** document for predictive optimisation guidance.
 
 ### 7.3 Classification Lifecycle Tag
 
@@ -568,6 +670,22 @@ The `classification_status` and `access_model` tags work together:
 | `provisional` | **Partially active.** `open` and `controlled` models are treated as `controlled` (request-based). `restricted` and `privileged` are enforced as-is. |
 | `classified` | **Fully active.** `access_model` is enforced as defined. |
 
+### 8.7 Reclassification Triggers
+
+Classification is not a one-time event. The following events require reclassification review of already-classified objects, potentially cycling back through the `provisional` state while the reassessment is completed.
+
+| Trigger | Description | Action |
+|---|---|---|
+| **Schema change** | New columns added to a classified table — may introduce PI or sensitivity not present at original classification | Steward reviews new columns for sensitivity. If PI detected, update Layer 2 and Layer 3 tags. |
+| **Source system data model change** | Upstream source system changes its schema, adding or repurposing fields | Impact assessment via Unity Catalog lineage. Steward reviews all downstream classified tables. |
+| **Regulatory change** | New legislation or amendment (e.g. Privacy Act reform, SOCI Rules update) changes what constitutes sensitive data | Data Governance Council triggers organisation-wide reclassification review for affected regulatory scope. |
+| **Business context change** | Data previously classified at one level is now used in a higher-sensitivity context (e.g. operational data now feeding SOCI-critical reporting) | Domain steward elevates classification. Downstream consumers notified. |
+| **Automated detection conflict** | UC automated data classification detects PI in a table tagged `pi_contained = false` | Immediate steward review per Section 5.2.6 conflict resolution rules. |
+| **Periodic review** | Scheduled review cycle | All classifications reviewed on a **12-month cycle**, aligned with the annual stewardship review. `classification_status` may temporarily revert to `provisional` during reassessment if material changes are identified. |
+| **Organisational restructure** | Domain ownership changes due to restructure | Domain reassignment follows Section 7.6 ownership rules. Classification may need updating if the new domain has different sensitivity context. |
+
+**Automation:** The classification SLA monitoring job (Section 8.5) should also track the last classification review date and alert when the 12-month review cycle is approaching.
+
 ---
 
 ## 9. WAICP-to-UC Enforcement Mapping
@@ -657,6 +775,91 @@ The tag vocabulary (allowed tag keys and permitted values) is a governed artefac
 
 **Versioning:** The tag taxonomy is versioned using semantic versioning (e.g. `v1.0.0`). Major version increments indicate breaking changes (removed keys or values); minor versions indicate additions. The current taxonomy version is recorded in the governance register and referenced in CI/CD validation rules.
 
+### 10.7 Tag Value Change Governance
+
+Section 10.6 governs changes to the tag **taxonomy** (adding or removing tag keys and allowed values). This section governs changes to tag **values** on individual objects — a distinct and more frequent operational scenario.
+
+**Immediate effect:** Unity Catalog ABAC policies evaluate governed tags at **query time**. When a tag value changes — e.g. `pi_contained` flips from `false` to `true`, or `masking_required` changes from `none` to `full` — the corresponding ABAC policy takes effect on the **next query**. There is no propagation delay or manual policy refresh required.
+
+**Change rules:**
+
+| Scenario | Action | Approval Required |
+|---|---|---|
+| **Elevation** (more restrictive) | Apply immediately — fail-safe behaviour | Data steward. No additional approval required. |
+| **Reduction** (less restrictive) | Apply only after approval and documented justification | Data steward + domain data owner. Justification recorded in governance register. |
+| **WAICP elevation** | Update `waicp_classification` tag. Steward must also update Layer 3 tags (`access_model`, `masking_required`) per Section 9 enforcement mapping. | Data steward. |
+| **WAICP reduction** | Formal approval required. Must not reduce below the minimum floor defined in Section 9. | Data steward + domain data owner + Data Governance Council (if reducing below `OFFICIAL:Sensitive`). |
+| **classification_status change** | Access posture shift per Section 8.6 takes immediate effect. | Per Section 8 lifecycle rules. |
+
+**Audit trail:**
+
+All tag changes are captured in Unity Catalog system tables (`system.access.audit`). A scheduled monitoring query should flag tag value changes on `classified` objects for steward review:
+
+```sql
+-- Monitor tag changes on classified objects (run daily)
+SELECT
+  event_time,
+  request_params.full_name_arg AS object_name,
+  request_params.tag_name AS tag_changed,
+  request_params.tag_value AS new_value,
+  user_identity.email AS changed_by
+FROM system.access.audit
+WHERE action_name = 'setTag'
+  AND event_date >= CURRENT_DATE - INTERVAL 1 DAY
+ORDER BY event_time DESC;
+```
+
+**Cascading changes:** When a tag value change on a Silver table affects downstream Gold tables (e.g. elevating `pi_contained` on a Silver source that feeds a Gold BI table), the steward must review and update tags on all downstream dependents. Unity Catalog lineage can be used to identify affected downstream objects.
+
+### 10.8 Tag Observability
+
+Beyond the classification SLA monitoring described in Section 8.5 and the tag change auditing in Section 10.7, the EDAP requires a comprehensive tag observability framework to detect tag degradation over time.
+
+**Completeness monitoring:**
+
+```sql
+-- Tag completeness by medallion layer and domain (run weekly)
+SELECT
+  t.tag_value AS medallion_layer,
+  d.tag_value AS data_domain,
+  COUNT(*) AS total_tables,
+  COUNT(CASE WHEN w.tag_value IS NOT NULL THEN 1 END) AS has_waicp,
+  COUNT(CASE WHEN p.tag_value IS NOT NULL THEN 1 END) AS has_pi_contained,
+  COUNT(CASE WHEN cs.tag_value IS NOT NULL THEN 1 END) AS has_classification_status,
+  ROUND(COUNT(CASE WHEN w.tag_value IS NOT NULL THEN 1 END) * 100.0 / COUNT(*), 1) AS waicp_pct
+FROM system.information_schema.tables tbl
+LEFT JOIN system.information_schema.table_tags t
+  ON tbl.table_catalog = t.catalog_name AND tbl.table_schema = t.schema_name
+  AND tbl.table_name = t.table_name AND t.tag_name = 'medallion_layer'
+LEFT JOIN system.information_schema.table_tags d
+  ON tbl.table_catalog = d.catalog_name AND tbl.table_schema = d.schema_name
+  AND tbl.table_name = d.table_name AND d.tag_name = 'data_domain'
+LEFT JOIN system.information_schema.table_tags w
+  ON tbl.table_catalog = w.catalog_name AND tbl.table_schema = w.schema_name
+  AND tbl.table_name = w.table_name AND w.tag_name = 'waicp_classification'
+LEFT JOIN system.information_schema.table_tags p
+  ON tbl.table_catalog = p.catalog_name AND tbl.table_schema = p.schema_name
+  AND tbl.table_name = p.table_name AND p.tag_name = 'pi_contained'
+LEFT JOIN system.information_schema.table_tags cs
+  ON tbl.table_catalog = cs.catalog_name AND tbl.table_schema = cs.schema_name
+  AND tbl.table_name = cs.table_name AND cs.tag_name = 'classification_status'
+GROUP BY t.tag_value, d.tag_value
+ORDER BY waicp_pct ASC;
+```
+
+**Alert thresholds:**
+
+| Metric | Advisory Threshold | Escalation Threshold | Action |
+|---|---|---|---|
+| Mandatory tag completeness | < 95% | < 90% | Alert domain steward; escalate to Data Governance Council |
+| `classification_status = unclassified` age | > 30 days | > 60 days | Per Section 8 SLA |
+| `quality_tier` review age | > 12 months | > 18 months | Steward review required |
+| PI drift (auto-detected PI vs `pi_contained = false`) | Any mismatch | — | Immediate steward review |
+
+**Drift detection:** Cross-reference Unity Catalog automated data classification results (Section 5.2.6) against manually assigned `pi_contained` tags. Any table where automated classification detects PI but `pi_contained = false` should trigger an immediate steward review.
+
+**Dashboard:** Publish a Databricks SQL dashboard showing tag health across the platform, broken down by domain, medallion layer, and classification status. Include trend lines to detect degradation over time.
+
 ---
 
 ## 11. Column-Level Governance
@@ -720,6 +923,19 @@ END;
 ```
 
 > **Warning:** The `'edap_salt'` value above is illustrative only. Production implementations must retrieve the salt from a secret-managed store (e.g. Databricks Secrets backed by Azure Key Vault), not a hardcoded string. A hardcoded salt is vulnerable to exposure through source control, notebook exports, and query history. Use `secret('edap-governance', 'hash-salt')` or an equivalent secret scope reference.
+
+```sql
+-- Tokenisation mask (format-preserving, reversible via token vault)
+-- Requires a token vault service (e.g. Protegrity, Voltage, or custom implementation)
+CREATE FUNCTION edap_mask_tokenise(value STRING)
+RETURNS STRING
+RETURN CASE
+  WHEN is_member('sg-edap-pi-authorised') THEN value
+  ELSE edap_token_vault_lookup(value, secret('edap-governance', 'token-key'))
+END;
+```
+
+> **Note:** The `edap_token_vault_lookup` function is a placeholder for the organisation's chosen tokenisation service. Unlike one-way hashing, tokenisation allows authorised users to retrieve the original value by reversing the token. This is essential for financial identifiers (TFN, bank account numbers) where: (a) the original value must be recoverable for legitimate business processes, (b) the token must preserve the field format for downstream validation, and (c) the same input must always produce the same token to support consistent joins across tables.
 
 ### 11.4 Row-Level Security
 
@@ -958,6 +1174,101 @@ The Data Governance Council ratifies the classification. Silver tables are now d
 - `soci_critical` = `false`
 - Access limited to Finance team + approved subscribers
 
+### 13.4 Cross-Domain Access — Finance vs Customer Analysts
+
+This example demonstrates how tags enforce different access outcomes for analysts in different business domains querying the same table.
+
+**Table:** `prod_gold.finance_bi.fact_contract_costs`
+
+**Tag stack:**
+
+| Tag | Layer | Value |
+|---|---|---|
+| `waicp_classification` | 1 | `OFFICIAL:Sensitive-Commercial` |
+| `pi_contained` | 2 | `true` (supplier contact name) |
+| `regulatory_scope` | 2 | `none` |
+| `sensitivity_type` | 2 | `commercial_in_confidence`, `personal_information` |
+| `access_model` | 3 | `restricted` |
+| `sharing_permitted` | 3 | `internal_only` |
+| `classification_status` | 4 | `classified` |
+| `data_domain` | 4 | `finance` |
+| `data_owner` | 4 | `cfo` |
+
+**Column-level tags:**
+
+| Column | `pi_type` | `masking_required` | Mask Function |
+|---|---|---|---|
+| `contract_id` | — | `none` | — |
+| `cost_centre` | — | `none` | — |
+| `contract_date` | — | `none` | — |
+| `contract_value` | — | `full` | `edap_mask_financial` |
+| `supplier_name` | — | `none` | — |
+| `supplier_contact_name` | `direct_identifier` | `full` | `edap_mask_pi_direct` |
+| `supplier_contact_email` | `direct_identifier` | `full` | `edap_mask_pi_direct` |
+
+**Security groups involved:**
+
+| Group | Members | Grants |
+|---|---|---|
+| `sg-edap-finance-restricted` | Finance data analysts, Finance data engineers | Table access + unmasked financial columns |
+| `sg-edap-pi-authorised` | Designated PI-authorised users across domains | Unmasked PI columns |
+| `sg-edap-customer-analysts` | Customer domain data analysts | No grant on this table (different domain) |
+
+**Scenario 1 — Finance Data Analyst queries the table:**
+
+The analyst is a member of `sg-edap-finance-restricted`.
+
+1. `classification_status = classified` → `access_model` is fully active
+2. `access_model = restricted` → UC checks group membership → analyst is in `sg-edap-finance-restricted` → **table access granted**
+3. For `contract_value`: `edap_mask_financial` checks `is_member('sg-edap-finance-restricted')` → **true** → sees real contract values
+4. For `supplier_contact_name`: `edap_mask_pi_direct` checks `is_member('sg-edap-pi-authorised')` → analyst is **not** in this group → **sees `***MASKED***`**
+
+| Column | Visible? | Value |
+|---|---|---|
+| `contract_id` | Yes | `CON-2026-00451` |
+| `cost_centre` | Yes | `4520` |
+| `contract_date` | Yes | `2026-01-15` |
+| `contract_value` | Yes | `$1,250,000.00` |
+| `supplier_name` | Yes | `Acme Water Services` |
+| `supplier_contact_name` | Masked | `***MASKED***` |
+| `supplier_contact_email` | Masked | `***MASKED***` |
+
+> **Key insight:** Even within the Finance domain, the analyst sees financial figures but not personal information. Access to financial data and access to PI are governed by **separate security groups** — being in the Finance team does not automatically grant PI access.
+
+**Scenario 2 — Customer Data Analyst queries the table (no cross-domain access):**
+
+The analyst is a member of `sg-edap-customer-analysts` only.
+
+1. `classification_status = classified` → `access_model` is fully active
+2. `access_model = restricted` → UC checks group membership → analyst is **not** in `sg-edap-finance-restricted` → **query denied**
+
+```
+Error: User does not have SELECT privilege on table
+  prod_gold.finance_bi.fact_contract_costs
+```
+
+The analyst cannot see any data. The table is discoverable in Unity Catalog (they can see it exists and read its description), but querying is blocked.
+
+**Scenario 3 — Customer Data Analyst with approved cross-domain access:**
+
+The Customer analyst submits an access request through the entitlement process. The Finance data steward approves read access for a specific business justification (e.g. customer-supplier reconciliation). The analyst is added to `sg-edap-finance-cross-domain-read`.
+
+1. `access_model = restricted` → analyst is now in `sg-edap-finance-cross-domain-read` (granted SELECT) → **table access granted**
+2. For `contract_value`: `edap_mask_financial` checks `is_member('sg-edap-finance-restricted')` → **false** (cross-domain read group does not include financial unmasking) → **sees NULL**
+3. For `supplier_contact_name`: `edap_mask_pi_direct` checks `is_member('sg-edap-pi-authorised')` → **false** → **sees `***MASKED***`**
+
+| Column | Visible? | Value |
+|---|---|---|
+| `contract_id` | Yes | `CON-2026-00451` |
+| `cost_centre` | Yes | `4520` |
+| `contract_date` | Yes | `2026-01-15` |
+| `contract_value` | Masked | `NULL` |
+| `supplier_name` | Yes | `Acme Water Services` |
+| `supplier_contact_name` | Masked | `***MASKED***` |
+| `supplier_contact_email` | Masked | `***MASKED***` |
+
+> **Key insight:** Cross-domain access grants visibility to the table structure and non-sensitive data, but sensitive columns remain masked. The Customer analyst can see which contracts exist and their dates, but not the financial values or supplier personal details. This enables legitimate cross-domain analysis without compromising data sensitivity.
+
 ---
 
 ## 14. Open Decisions for Workshop
@@ -977,76 +1288,154 @@ The Data Governance Council ratifies the classification. Silver tables are now d
 
 ---
 
-## 15. Implementation Roadmap
+## 15. Phased Tag Rollout
 
-### Phase 1 — Foundation (Weeks 1–4)
-- Define and register all tag keys in Unity Catalog (all four layers + `classification_status`)
+This document defines 40 tag keys across four layers. Enforcing all tags from day one is impractical and risks governance fatigue. Instead, tags are rolled out in three phases — each phase introduces a defined set of tags, the capabilities that support them, and the enforcement posture.
+
+**Principle:** Each phase must be fully operational before the next begins. Do not advance to Phase 2 until Phase 1 tags are consistently applied, monitored, and enforced.
+
+### Phase 1 — Foundation (Weeks 1–6): 14 Tags
+
+The minimum viable governance set. These tags enable classification, access control, PI protection, and domain ownership — the non-negotiable foundations.
+
+| Tag | Layer | Why Phase 1 |
+|---|---|---|
+| `waicp_classification` | 1 | Mandatory corporate classification — cannot defer |
+| `pi_contained` | 2 | Drives masking decisions and PRIS Act compliance |
+| `pi_type` | 2 | Column-level PI identification (where `pi_contained = true`) |
+| `regulatory_scope` | 2 | Identifies applicable legislation — drives enforcement decisions |
+| `access_model` | 3 | Controls who can access what |
+| `masking_required` | 3 | Column-level masking enforcement (where `pi_type` set) |
+| `retention_days` | 3 | State Records Act retention compliance |
+| `classification_status` | 4 | Classification lifecycle — gates cross-domain access |
+| `medallion_layer` | 4 | Catalog-level layer identification |
+| `medallion_sublayer` | 4 | Schema-level zone identification |
+| `source_system` | 4 | Source traceability and lineage |
+| `data_domain` | 4 | Domain ownership assignment |
+| `data_owner` | 4 | Executive accountability |
+| `data_steward` | 4 | Operational stewardship |
+
+**Capabilities to deliver:**
+
+- Register Phase 1 tag keys as UC governed tags with tag policies
 - Create WAICP classification mapping for all known source systems
 - Implement default tag application at Bronze Raw Zone ingestion (including `classification_status = unclassified`)
 - Create column masking functions for standard PI types (`edap_mask_*` functions)
-- Deploy classification SLA monitoring job
-
-### Phase 2 — Enforcement (Weeks 5–8)
-- Apply Layer 1–3 tags to all existing Bronze and Silver tables
-- Implement row-level security functions for domain-scoped access
-- Configure Alation OCF connector for tag extraction
-- Deploy tag compliance audit dashboard in Databricks SQL
 - Implement `classification_status`-based access control overrides
+- Deploy classification SLA monitoring job
+- Enable CI/CD tag validation in **advisory mode** for Phase 1 tags
+
+**Exit criteria:** All existing Bronze and Silver tables carry the 14 Phase 1 tags. Classification SLA monitoring is active. Masking functions are applied to known PI columns.
+
+### Phase 2 — Governance Depth (Weeks 7–12): +12 Tags (26 Total)
+
+Adds sensitivity granularity, sharing governance, SOCI compliance, and data product signals. These tags are important but can be backfilled once the Phase 1 foundation is stable.
+
+| Tag | Layer | Why Phase 2 |
+|---|---|---|
+| `sensitivity_type` | 2 | Granular sensitivity reason beyond WAICP sublabels |
+| `pi_lawful_basis` | 2 | PRIS Act consent and lawful basis tracking |
+| `sharing_permitted` | 3 | Delta Sharing governance — needed before any external sharing |
+| `encryption_at_rest` | 3 | SOCI Act CMK encryption requirements |
+| `data_type` | 4 | Operational metadata for platform management |
+| `refresh_frequency` | 4 | SLA management and data freshness monitoring |
+| `soci_critical` | 4 | Critical infrastructure flag — drives CMK and access restrictions |
+| `quality_tier` | 4 | Consumer trust signal for data products |
+| `data_product_tier` | 4 | Data product maturity lifecycle |
+| `ingestion_method` | 4 | Bronze pipeline lineage |
+| `ingestion_team` | 4 | Bronze pipeline accountability |
+| `bi_published` | 4 | BI tool exposure flag |
+
+**Capabilities to deliver:**
+
+- ABAC policies for SOCI-critical data and Delta Sharing governance
+- Row-level security functions for domain-scoped access
+- Configure Alation OCF connector for tag extraction
+- Automated tag propagation in Lakeflow SDP pipelines
+- Tag compliance audit dashboard in Databricks SQL
 - Backfill `classification_status` for existing tables (classify existing assets)
+- CI/CD tag validation: **hard enforcement** for Phase 1 tags, **advisory** for Phase 2 tags
 
-### Phase 3 — Automation (Weeks 9–12)
-- Implement automated tag propagation in Lakeflow SDP pipelines
-- Enable tag validation in CI/CD (advisory mode)
-- Configure Delta Sharing policies driven by `sharing_permitted` tag
-- Implement multi-domain lineage tracking in pipeline metadata framework
-- Publish tag governance documentation and training materials
+**Exit criteria:** All Silver and Gold tables carry Phase 1 + 2 tags. ABAC policies active for PI and SOCI data. Alation sync operational. Phase 1 tags under hard CI/CD enforcement.
 
-### Phase 4 — Hardening (Weeks 13–16)
-- Move tag validation from advisory to hard enforcement in CI/CD
-- Implement production Gold layer deployment gate (require `classification_status != unclassified`)
+### Phase 3 — Maturity (Weeks 13+): +14 Tags (40 Total)
+
+These tags support advanced governance capabilities — AI governance, data contracts, FinOps, and business continuity. Adopt them **as use cases demand**, not as a blanket mandate. Not all tags in Phase 3 will be relevant to every table.
+
+| Tag | Layer | Adopt When |
+|---|---|---|
+| `ai_training_permitted` | 2 | When AI/ML workloads consume Gold tables |
+| `ai_use_restriction` | 2 | When AI/ML workloads consume Gold tables |
+| `synthetic_derivation` | 2 | When synthetic data generation is in use |
+| `contract_version` | 3 | When formal data contracts are established |
+| `contract_sla_tier` | 3 | When formal data contracts are established |
+| `breaking_change_policy` | 3 | When formal data contracts are established |
+| `data_product_state` | 4 | When data products are managed as formal assets |
+| `data_product` | 4 | When data products are managed as formal assets |
+| `consuming_domain` | 4 | When Gold tables serve cross-domain consumers |
+| `cost_centre` | 4 | When FinOps chargeback is implemented |
+| `project_code` | 4 | When CAPEX/OPEX project tracking is required |
+| `bc_tier` | 4 | When DR/BC planning includes data platform |
+| `rto_hours` | 4 | When DR/BC planning includes data platform |
+| `rpo_hours` | 4 | When DR/BC planning includes data platform |
+
+**Capabilities to deliver:**
+
+- Full tag observability dashboard with completeness, drift, and staleness monitoring
+- Reclassification automation (12-month review cycle)
+- Production Gold layer deployment gate (require `classification_status != unclassified`)
+- Cross-domain access request self-service portal
+- CI/CD hard enforcement for all mandatory tags
 - Conduct classification lifecycle retrospective — assess SLA appropriateness
 - Extend Alation workflows to support `classification_status` progression
-- Publish cross-domain access request self-service portal
+
+**Exit criteria:** Tag observability dashboard shows >95% completeness for Phase 1 + 2 mandatory tags. Phase 3 tags applied where relevant use cases exist.
 
 ---
 
 ## Appendix A: Tag Quick Reference
 
-| Tag Key | Layer | Applied To | Required? | Default Value |
-|---------|-------|-----------|-----------|--------------|
-| `waicp_classification` | 1 | Tables, views, schemas, catalogs | Mandatory (all tables) | `OFFICIAL` |
-| `pi_contained` | 2 | Tables, columns | Mandatory (Silver, Gold) | `false` |
-| `pi_type` | 2 | Columns | Mandatory (where `pi_contained = true`) | — |
-| `regulatory_scope` | 2 | Tables | Mandatory (Silver, Gold) | `none` |
-| `sensitivity_type` | 2 | Tables, columns | Mandatory (where sensitive) | — |
-| `pi_lawful_basis` | 2 | Tables | Mandatory (where `pi_contained = true`) | `not_assessed` |
-| `ai_training_permitted` | 2 | Tables | Recommended | `false` |
-| `ai_use_restriction` | 2 | Tables | Recommended | `none` |
-| `synthetic_derivation` | 2 | Tables | Recommended (where applicable) | `false` |
-| `access_model` | 3 | Tables, schemas | Mandatory (Silver, Gold) | `controlled` |
-| `masking_required` | 3 | Columns | Mandatory (where `pi_type` set) | `none` |
-| `sharing_permitted` | 3 | Tables, schemas | Mandatory (Gold) | `internal_only` |
-| `encryption_at_rest` | 3 | Tables, schemas, catalogs | Mandatory (SOCI-scoped) | `platform_default` |
-| `retention_days` | 3 | Tables | Mandatory (Silver, Gold) | — |
-| `contract_version` | 3 | Tables | Recommended (where contract defined) | — |
-| `contract_sla_tier` | 3 | Tables | Recommended (where contract defined) | — |
-| `breaking_change_policy` | 3 | Tables | Recommended (where contract defined) | `none` |
-| `medallion_layer` | 4 | Catalogs, schemas | Mandatory | — |
-| `medallion_sublayer` | 4 | Schemas | Mandatory | — |
-| `source_system` | 4 | Schemas, tables | Mandatory | — |
-| `data_domain` | 4 | Schemas, tables | Mandatory | Source system name (Bronze) |
-| `data_owner` | 4 | Schemas, tables | Mandatory (Silver, Gold) | — |
-| `data_steward` | 4 | Schemas, tables | Mandatory (Silver, Gold) | — |
-| `data_type` | 4 | Tables | Recommended | — |
-| `refresh_frequency` | 4 | Tables | Mandatory (Gold) | — |
-| `data_product` | 4 | Tables | Optional | — |
-| `soci_critical` | 4 | Schemas, tables | Recommended (SOCI-scoped) | `false` |
-| `consuming_domain` | 4 | Tables (Gold) | Recommended (cross-domain Gold) | — |
-| `ingestion_method` | 4 | Tables (Bronze) | Mandatory | — |
-| `ingestion_team` | 4 | Tables (Bronze) | Mandatory | — |
-| `quality_tier` | 4 | Tables | Recommended (Silver, Gold) | `uncertified` |
-| `classification_status` | 4 | Tables, schemas | Mandatory (all tables) | `unclassified` |
-| `bi_published` | 4 | Tables | Mandatory (Gold BI) | `false` |
+| Tag Key | Layer | Phase | Applied To | Required? | Default Value |
+|---------|-------|-------|-----------|-----------|--------------|
+| `waicp_classification` | 1 | 1 | Tables, views, schemas, catalogs | Mandatory (all tables) | `OFFICIAL` |
+| `pi_contained` | 2 | 1 | Tables, columns | Mandatory (Silver, Gold) | `false` |
+| `pi_type` | 2 | 1 | Columns | Mandatory (where `pi_contained = true`) | — |
+| `regulatory_scope` | 2 | 1 | Tables | Mandatory (Silver, Gold) | `none` |
+| `sensitivity_type` | 2 | 2 | Tables, columns | Mandatory (where sensitive) | — |
+| `pi_lawful_basis` | 2 | 2 | Tables | Mandatory (where `pi_contained = true`) | `not_assessed` |
+| `ai_training_permitted` | 2 | 3 | Tables | Recommended | `false` |
+| `ai_use_restriction` | 2 | 3 | Tables | Recommended | `none` |
+| `synthetic_derivation` | 2 | 3 | Tables | Recommended (where applicable) | `false` |
+| `access_model` | 3 | 1 | Tables, schemas | Mandatory (Silver, Gold) | `controlled` |
+| `masking_required` | 3 | 1 | Columns | Mandatory (where `pi_type` set) | `none` |
+| `sharing_permitted` | 3 | 2 | Tables, schemas | Mandatory (Gold) | `internal_only` |
+| `encryption_at_rest` | 3 | 2 | Tables, schemas, catalogs | Mandatory (SOCI-scoped) | `platform_default` |
+| `retention_days` | 3 | 1 | Tables | Mandatory (Silver, Gold) | — |
+| `contract_version` | 3 | 3 | Tables | Recommended (where contract defined) | — |
+| `contract_sla_tier` | 3 | 3 | Tables | Recommended (where contract defined) | — |
+| `breaking_change_policy` | 3 | 3 | Tables | Recommended (where contract defined) | `none` |
+| `medallion_layer` | 4 | 1 | Catalogs, schemas | Mandatory | — |
+| `medallion_sublayer` | 4 | 1 | Schemas | Mandatory | — |
+| `source_system` | 4 | 1 | Schemas, tables | Mandatory | — |
+| `data_domain` | 4 | 1 | Schemas, tables | Mandatory | Source system name (Bronze) |
+| `data_owner` | 4 | 1 | Schemas, tables | Mandatory (Silver, Gold) | — |
+| `data_steward` | 4 | 1 | Schemas, tables | Mandatory (Silver, Gold) | — |
+| `data_type` | 4 | 2 | Tables | Recommended | — |
+| `refresh_frequency` | 4 | 2 | Tables | Mandatory (Gold) | — |
+| `data_product` | 4 | 3 | Tables | Optional | — |
+| `soci_critical` | 4 | 2 | Schemas, tables | Recommended (SOCI-scoped) | `false` |
+| `consuming_domain` | 4 | 3 | Tables (Gold) | Recommended (cross-domain Gold) | — |
+| `ingestion_method` | 4 | 2 | Tables (Bronze) | Mandatory | — |
+| `ingestion_team` | 4 | 2 | Tables (Bronze) | Mandatory | — |
+| `quality_tier` | 4 | 2 | Tables | Recommended (Silver, Gold) | `uncertified` |
+| `classification_status` | 4 | 1 | Tables, schemas | Mandatory (all tables) | `unclassified` |
+| `bi_published` | 4 | 2 | Tables | Mandatory (Gold BI) | `false` |
+| `data_product_state` | 4 | 3 | Tables (Gold) | Recommended (where data product) | — |
+| `cost_centre` | 4 | 3 | Schemas, tables | Optional | — |
+| `project_code` | 4 | 3 | Schemas, tables | Optional | — |
+| `bc_tier` | 4 | 3 | Tables | Optional | `standard` |
+| `rto_hours` | 4 | 3 | Tables | Optional (recommended for Gold data products) | — |
+| `rpo_hours` | 4 | 3 | Tables | Optional (recommended for Gold data products) | — |
 
 ---
 
@@ -1067,10 +1456,59 @@ The `data_domain` tag values align with the seven enterprise data domains define
 
 ---
 
-## Appendix C: Revision History
+## Appendix C: Standards and Framework Alignment
+
+This appendix maps the EDAP tagging strategy to external governance, security, and data management frameworks. It provides a single audit-ready reference for demonstrating compliance.
+
+### Information Security and Privacy
+
+| Framework | Control / Requirement | Tagging Strategy Implementation |
+|---|---|---|
+| **ISO 27001:2022** A.5.12 | Classification of information | Layer 1 (`waicp_classification`) — mandatory WAICP classification on all objects |
+| **ISO 27001:2022** A.5.13 | Labelling of information | Governed tags applied via Unity Catalog tag policies (Section 3.1) |
+| **ISO 27001:2022** A.8.2 | Information classification — handling procedures | Layer 3 tags map classification to UC enforcement actions (Section 6.1.1, Section 9) |
+| **ISO 27001:2022** A.8.3 | Handling of assets — reclassification | Tag value change governance (Section 10.7), reclassification triggers (Section 8.7) |
+| **ISO 27001:2022** A.5.1 | Policies for information security | ABAC policy lifecycle (Section 6.1.2) |
+| **NIST CSF** Identify (ID.AM) | Asset management — inventory and classification | Layer 4 operational tags, classification lifecycle (Section 8) |
+| **NIST CSF** Protect (PR.AC) | Access control | `access_model` tag + ABAC policies (Section 6), classification_status interaction (Section 8.6) |
+| **NIST CSF** Protect (PR.DS) | Data security | Column masking (Section 11), encryption at rest (Section 6.2.4) |
+| **NIST CSF** Detect (DE.CM) | Continuous monitoring | Tag observability framework (Section 10.8), drift detection |
+| **Essential Eight** (ACSC) | Application control, restrict admin privileges | `access_model` tiers, PAM for `privileged` access, workspace binding |
+| **PRIS Act 2024** | PI handling obligations | `pi_contained`, `pi_type`, `pi_lawful_basis` tags (Section 5.2.1, 5.2.4), automated PI detection (Section 5.2.6) |
+| **SOCI Act 2018** | Critical infrastructure risk management | `soci_critical` tag, `encryption_at_rest = customer_managed_key`, restricted access model |
+| **State Records Act 2000** | Retention and disposal | `retention_days` tag (Section 6.2.6), aligned with disposal schedules |
+
+### Data Management and Governance
+
+| Framework | Principle / Area | Tagging Strategy Implementation |
+|---|---|---|
+| **DMBOK2** | Metadata management | Four-layer governed tag taxonomy (Section 3), tag taxonomy change management (Section 10.6) |
+| **DMBOK2** | Data governance operating model | Classification lifecycle (Section 8), stewardship roles (Section 7.6), ABAC policy governance (Section 6.1.2) |
+| **DMBOK2** | Data quality management | `quality_tier` tag, DQ annotation approach (companion Medallion Architecture) |
+| **Data Mesh** | Domain ownership | `data_domain`, `data_owner`, `data_steward` tags, Section 7.6 ownership rules |
+| **Data Mesh** | Data as a product | `data_product_tier`, `data_product_state`, data contract tags (Section 6.2.5) |
+| **Data Mesh** | Federated computational governance | Tag observability (Section 10.8), automated classification (Section 5.2.6), CI/CD tag validation |
+| **FAIR Principles** | Findability | Tags enable Unity Catalog and Alation discovery (Section 12) |
+| **FAIR Principles** | Accessibility | `access_model` tag with classification_status interaction defines graduated access |
+| **FAIR Principles** | Interoperability | Standardised governed tag vocabulary with controlled allowed values |
+| **FAIR Principles** | Reusability | Data contract tags, `quality_tier`, metric definitions, `data_product_tier` |
+
+### AI Governance
+
+| Framework | Principle / Area | Tagging Strategy Implementation |
+|---|---|---|
+| **ISO/IEC 42001:2023** | AI management system — data governance | `ai_training_permitted`, `ai_use_restriction`, `synthetic_derivation` tags (Section 5.2.5) |
+| **NIST AI RMF 1.0** | Map — AI risk context | `ai_use_restriction` controls permitted AI consumption patterns |
+| **Australian Voluntary AI Safety Standard** | Responsible AI data use | `pi_lawful_basis` consent verification for AI training (Section 5.2.4) |
+
+---
+
+## Appendix D: Revision History
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 0.1 | March 2026 | Architecture & Strategy | Initial draft — four-layer tagging model |
 | 0.2 | March 2026 | Architecture & Strategy | Added classification lifecycle (Section 8), cross-domain access model, multi-domain source system handling (Section 7.4–7.6), column-level governance (Section 11), worked example for classification lifecycle (Section 13.3), additional decision points (8–10), Phase 4 implementation roadmap |
 | 0.3 | March 2026 | Architecture & Strategy | Added `pi_lawful_basis` tag (Section 5.2.4) for consent and lawful basis tracking. Added `quality_tier` tag (Section 7.2) for data product quality signals. Added AI governance standards references (ISO/IEC 42001:2023, NIST AI RMF, Voluntary AI Safety Standard) to Section 5.2.5. Added SOCI 2024 Rules amendments reference. Added Privacy Act reform note for automated decision-making. Added Lakehouse Federation tagging guidance (Section 10.5). Added tag taxonomy change management process (Section 10.6). Added Delta Sharing external governance cross-reference. Updated Appendix A with new tags. |
+| 0.4 | March 2026 | Architecture & Strategy | Industry best practice alignment review. Added: UC governed tags declaration (Section 3.1), tag-to-ABAC composition flow (Section 6.1.1), ABAC policy lifecycle governance (Section 6.1.2), tokenisation masking pattern (Section 6.2.2, 11.3), tag value change governance (Section 10.7), tag observability framework (Section 10.8), reclassification triggers (Section 8.7), `data_product_state` tag alignment with Data Products document (Section 7.2), environment tag clarification (Section 7.2), FinOps tags (`cost_centre`, `project_code`), business continuity tags (`bc_tier`, `rto_hours`, `rpo_hours`), data contract ODCS cross-reference (Section 6.2.5), predictive optimisation note (Section 7.2), standards cross-reference appendix (Appendix C). Updated Appendix A. |
+| 0.5 | March 2026 | Architecture & Strategy | Replaced capability-focused implementation roadmap (Section 15) with phased tag rollout — 14 tags in Phase 1 (Foundation), +12 in Phase 2 (Governance Depth), +14 in Phase 3 (Maturity). Added Phase column to Appendix A Tag Quick Reference. Each phase defines tags, capabilities, and exit criteria. |

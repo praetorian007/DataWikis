@@ -636,7 +636,7 @@ The following tags should be applied to Unity Catalog objects (tables, views, vo
 | `access_model` | 3 | Access restriction level | `open`, `controlled`, `restricted`, `privileged` |
 | `masking_required` | 3 | Column masking behaviour (where `pi_type` set) | `none`, `partial`, `full`, `hash`, `redact` |
 | `medallion_layer` | 4 | Layer in the medallion architecture | `bronze`, `silver`, `gold` |
-| `medallion_sublayer` | 4 | Zone within the layer | `raw`, `base`, `enriched`, `exploratory`, `bi` |
+| `medallion_sublayer` | 4 | Zone within the layer | `landing`, `raw`, `protected`, `base`, `enriched`, `exploratory`, `bi`, `sandbox` |
 | `source_system` | 4 | Originating source system | `sap_ecc`, `maximo`, `scada`, `grange` |
 | `data_domain` | 4 | Business data domain | `customer`, `asset`, `operations`, `finance` |
 | `data_owner` | 4 | Accountable data owner (role or team) | `asset_management`, `customer_services` |
